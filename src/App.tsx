@@ -23,6 +23,11 @@ import AllPatient from './pages/DoctorPages/AllPatient';
 import TimeSlots from './pages/TimeSlots';
 import EditDoctorProfile from './pages/EditDoctorProfile';
 import PatientEMR from './pages/PatientEMR';
+import LabDashboard from './pages/LabPages/LabDashboard';
+import Patients from './pages/LabPages/LabPatients';
+import LabProfile from './pages/LabPages/LabProfile';
+import LabTests from "./pages/LabPages/LabTests";
+
 
 function App() {
 
@@ -67,7 +72,21 @@ function App() {
             <Route path="doctorProfile" element={<DoctorProfile />} />
             <Route path="notifications" element={<DoctorNotifications />} />
             <Route path="add-medicine" element={<AddMedicine />} />
+    </Route>
+
+            <Route path="/lab-dashboard" element={<LabDashboard />}>
+            {" "}
+            <Route
+              index
+              element={
+                <h1 className="text-2xl font-bold">Welcome to Dashboard</h1>
+              }
+            />
+            <Route path="patients" element={<Patients />} />
+            <Route path="tests" element={<LabTests />} />
+            <Route path="profile" element={<LabProfile />} />
           </Route>
+          {/* </Route> */}
       </Routes>
     </>
   )
