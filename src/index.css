@@ -1,0 +1,131 @@
+@import "tailwindcss";
+
+/* *{
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,body{
+  height: 100%;
+  width: 100%;
+} */
+
+/* @import "tailwindcss"; */
+
+/* Optional: global overrides */
+body {
+  background-color: #f9fafb; /* gray-50 */
+  color: #111827;           /* gray-900 */
+  font-family: 'Montserrat', sans-serif;
+}
+html {
+  /* font-size: 85%; */
+}
+
+
+/* Hide scrollbar but keep scroll functionality */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.inputBox {
+  @apply mt-1 w-full rounded-xl border border-gray-300 p-3 shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white;
+}
+@keyframes shine {
+      100% {
+        left: 125%;
+      }
+    }
+    .animate-shine {
+      animation: shine 1.5s;
+    }
+
+
+     @keyframes blob {
+    0% { transform: translate(0px, 0px) scale(1); }
+    33% { transform: translate(30px, -50px) scale(1.1); }
+    66% { transform: translate(-20px, 20px) scale(0.9); }
+    100% { transform: translate(0px, 0px) scale(1); }
+  }
+  .animate-blob {
+    animation: blob 7s infinite;
+  }
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
+
+   @keyframes blob {
+      0% { transform: translate(0px, 0px) scale(1); }
+      33% { transform: translate(30px, -50px) scale(1.1); }
+      66% { transform: translate(-20px, 20px) scale(0.9); }
+      100% { transform: translate(0px, 0px) scale(1); }
+    }
+    .animate-blob {
+      animation: blob 7s infinite;
+    }
+    .animation-delay-2000 {
+      animation-delay: 2s;
+    }
+    .animation-delay-4000 {
+      animation-delay: 4s;
+    }
+
+    /* /// */
+    @keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+
+@keyframes blinkPulse {
+  0%, 100% {
+    box-shadow: 0 0 0px rgba(255, 255, 255, 0.0);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.45);
+  }
+}
+
+.blink-focus {
+  animation: blinkPulse 1.6s infinite ease-in-out;
+}
+
+
+.no-scrollbar {
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* IE 10+ */
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;                /* Chrome, Safari */
+}
