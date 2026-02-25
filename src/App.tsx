@@ -12,6 +12,17 @@ import DoctorLogin from './pages/LoginPages/DoctorLogin';
 import LoginClinic from './pages/LoginPages/LoginClinic';
 import LoginPatient from './pages/LoginPages/LoginPatient';
 import LoginLab from './pages/LoginPages/LoginLab';
+import DoctorDashboard from './pages/DoctorPages/DoctorDashboard';
+import DoctorAppointments from './pages/DoctorPages/DoctorAppointments';
+import DoctorDashboardHome from './pages/DoctorPages/DoctorHomeDashboard';
+import PrescriptionForm from './pages/DoctorPages/PrescriptionForm';
+import DoctorProfile from './pages/DoctorPages/DoctorProfile';
+import DoctorNotifications from './pages/DoctorPages/DoctorNotifications';
+import AddMedicine from './pages/DoctorPages/AddMedicine';
+import AllPatient from './pages/DoctorPages/AllPatient';
+import TimeSlots from './pages/TimeSlots';
+import EditDoctorProfile from './pages/EditDoctorProfile';
+import PatientEMR from './pages/PatientEMR';
 
 function App() {
 
@@ -33,6 +44,30 @@ function App() {
             <Route path="/clinic-login" element={<LoginClinic />} />
             <Route path="/patient-login" element={<LoginPatient />} />
             <Route path="/lab-login" element={<LoginLab />} />
+
+            {/* Doctor Dashboard */}
+          <Route path="/doctordashboard/:drId" element={<DoctorDashboard />}>
+            <Route index element={<DoctorAppointments />} />
+            <Route
+              path="doctor-home-dashboard"
+              element={<DoctorDashboardHome />}
+            />
+            <Route path="appointments" element={<DoctorAppointments />} />
+            <Route
+              path="appointments/addPrescription/:bookingId/:patientAadhar"
+              element={<PrescriptionForm />}
+            />
+            <Route path="time-slots" element={<TimeSlots />} />
+            <Route path="patients" element={<AllPatient />} />
+            <Route path="patientEMR/:aadhar" element={<PatientEMR />} />
+            <Route
+              path="editDoctorIdPassword"
+              element={<EditDoctorProfile />}
+            />
+            <Route path="doctorProfile" element={<DoctorProfile />} />
+            <Route path="notifications" element={<DoctorNotifications />} />
+            <Route path="add-medicine" element={<AddMedicine />} />
+          </Route>
       </Routes>
     </>
   )
