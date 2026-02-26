@@ -27,6 +27,12 @@ import LabDashboard from './pages/LabPages/LabDashboard';
 import Patients from './pages/LabPages/LabPatients';
 import LabProfile from './pages/LabPages/LabProfile';
 import LabTests from "./pages/LabPages/LabTests";
+import { ClinicDashboard } from './pages/ClinicPages/ClinicDashboard';
+import ClinicHomeDashboard from './pages/ClinicPages/ClinicHomeDashboard';
+import ClinicProfile from './pages/ClinicPages/ClinicProfile';
+import AddDoctor from './pages/ClinicPages/AddDoctor';
+import ClinicDoctors from './pages/ClinicPages/ClinicDoctors';
+import AllClinicPatients from './pages/ClinicPages/AllClinicPatients';
 
 
 function App() {
@@ -86,7 +92,25 @@ function App() {
             <Route path="tests" element={<LabTests />} />
             <Route path="profile" element={<LabProfile />} />
           </Route>
-          {/* </Route> */}
+
+          <Route
+            path="/clinicDashboard/:clinicId"
+            element={<ClinicDashboard />}
+          >
+            <Route index element={<ClinicHomeDashboard />} />
+            <Route
+              path="clinic-home-dashboard"
+              element={<ClinicHomeDashboard />}
+            />
+
+            <Route path="clinic-profile" element={<ClinicProfile />} />
+            <Route path="add-doctor" element={<AddDoctor />} />
+            <Route path="all-clinic-doctors" element={<ClinicDoctors />} />
+            <Route path="all-clinic-patients" element={<AllClinicPatients />} />
+
+
+
+          </Route>
       </Routes>
     </>
   )
