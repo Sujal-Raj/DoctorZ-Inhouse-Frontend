@@ -40,9 +40,9 @@ const DoctorNotifications: React.FC = () => {
     setLoading(false);
   };
 
-  // useEffect(() => {
-  //   fetchNotifications();
-  // }, []);
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
 
   // Accept request
   const handleAccept = async (notificationId: string, clinicId: string) => {

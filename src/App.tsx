@@ -33,6 +33,10 @@ import ClinicProfile from './pages/ClinicPages/ClinicProfile';
 import AddDoctor from './pages/ClinicPages/AddDoctor';
 import ClinicDoctors from './pages/ClinicPages/ClinicDoctors';
 import AllClinicPatients from './pages/ClinicPages/AllClinicPatients';
+import LoginReceptionist from './pages/LoginPages/LoginReceptionist';
+import ReceptionistDashboard from './pages/ReceptionistPages/ReceptionistDashboard';
+import RegisterLab from './pages/RegisterPages/RegisterLab';
+import HomeLandingPage from './components/LandingPage';
 
 
 function App() {
@@ -47,7 +51,7 @@ function App() {
       <Routes>
           <Route element={<Layout />}/>
 
-      <Route path='/' element={<Navbar/>}/>
+      <Route path='/' element={<HomeLandingPage/>}/>
                   <Route path="/patient-register" element={<RegisterPatient />} />
             <Route path="/doctor-register" element={<RegisterDoctor />} />
             <Route path="/clinic-register" element={<RegisterClinic />} />
@@ -55,6 +59,7 @@ function App() {
             <Route path="/clinic-login" element={<LoginClinic />} />
             <Route path="/patient-login" element={<LoginPatient />} />
             <Route path="/lab-login" element={<LoginLab />} />
+            <Route path="/lab-register" element={<RegisterLab />} />
 
             {/* Doctor Dashboard */}
           <Route path="/doctordashboard/:drId" element={<DoctorDashboard />}>
@@ -107,10 +112,13 @@ function App() {
             <Route path="add-doctor" element={<AddDoctor />} />
             <Route path="all-clinic-doctors" element={<ClinicDoctors />} />
             <Route path="all-clinic-patients" element={<AllClinicPatients />} />
-
-
-
           </Route>
+
+          <Route path='/receptionist-login' element={<LoginReceptionist/>}/>
+          <Route
+          path="/receptionistDashboard/:id"
+          element={<ReceptionistDashboard />}
+        />
       </Routes>
     </>
   )
