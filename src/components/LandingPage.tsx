@@ -4,7 +4,7 @@ import { ChevronDown, Stethoscope, UserCircle2, Hospital, FlaskConical, User, Fi
 import Navbar from "../components/Navbar";
 
 const loginOptions = [
-  { label: "Patient", path: "/patient-login", icon: <UserCircle2 size={15} /> },
+  // { label: "Patient", path: "/patient-login", icon: <UserCircle2 size={15} /> },
   { label: "Doctor", path: "/doctor-login", icon: <Stethoscope size={15} /> },
   { label: "Clinic / Hospital", path: "/clinic-login", icon: <Hospital size={15} /> },
   { label: "Lab", path: "/lab-login", icon: <FlaskConical size={15} /> },
@@ -12,7 +12,7 @@ const loginOptions = [
 ];
 
 const registerOptions = [
-  { label: "Patient", path: "/patient-register", icon: <UserCircle2 size={15} /> },
+  // { label: "Patient", path: "/patient-register", icon: <UserCircle2 size={15} /> },
   { label: "Doctor", path: "/doctor-register", icon: <Stethoscope size={15} /> },
   { label: "Clinic / Hospital", path: "/clinic-register", icon: <Hospital size={15} /> },
   { label: "Lab", path: "/lab-register", icon: <FlaskConical size={15} /> },
@@ -61,7 +61,7 @@ export default function HomeLandingPage() {
     <div className="max-h-screen flex flex-col">
       <Navbar />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 flex-1">
+      <div className="grid grid-cols-1 md:grid-cols-2 flex-1 mt-15">
         {/* Image side */}
         <div className="relative hidden md:block">
           <img
@@ -109,14 +109,14 @@ export default function HomeLandingPage() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-100 px-10 py-3.5 flex items-center justify-between text-xs text-gray-400">
+      {/* <footer className="bg-white border-t border-gray-100 px-10 py-3.5 flex items-center justify-between text-xs text-gray-400">
         <span>© 2026 DoctorZ. All rights reserved.</span>
         <div className="flex gap-5">
           <a href="#" className="hover:text-gray-600 transition-colors">Privacy Policy</a>
           <a href="#" className="hover:text-gray-600 transition-colors">Terms of Service</a>
           <a href="#" className="hover:text-gray-600 transition-colors">Support</a>
         </div>
-      </footer>
+      </footer> */}
     </div>
   );
 }
