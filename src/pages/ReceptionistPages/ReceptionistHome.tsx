@@ -1,5 +1,5 @@
 // 📁 ReceptionistHome.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import api from "../../Services/mainApi";
 import {
   CalendarDays,
@@ -10,10 +10,12 @@ import {
   AlertCircle,
   Stethoscope,
   TrendingUp,
-  Bell,
   ChevronRight,
   Wallet,
   RefreshCw,
+  Search,
+  Hash,
+  X,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -29,6 +31,7 @@ interface Doctor {
 
 interface Patient {
   bookingId: string;
+  tokenNumber?: number;
   doctor: { fullName: string; specialization: string };
   patient: string;
   mode: string;
@@ -60,33 +63,36 @@ function initials(name: string) {
     .toUpperCase();
 }
 
-function isToday(date: Date) {
+function isSameDay(date: Date, ref: Date) {
   const d = new Date(date);
-  const now = new Date();
   return (
-    d.getDate() === now.getDate() &&
-    d.getMonth() === now.getMonth() &&
-    d.getFullYear() === now.getFullYear()
+    d.getDate() === ref.getDate() &&
+    d.getMonth() === ref.getMonth() &&
+    d.getFullYear() === ref.getFullYear()
   );
 }
 
-// ─── Static alerts (UI context only — no API) ─────────────────────────────────
+function toInputDate(d: Date) {
+  return d.toISOString().split("T")[0];
+}
 
-const ALERTS = [
-  { id: 1, text: "Remember to confirm tomorrow's appointments", type: "info" },
-  { id: 2, text: "2 patients are currently waiting", type: "warning" },
-  { id: 3, text: "All morning slots are fully booked", type: "success" },
-];
+type DateFilter = "all" | "today" | "tomorrow" | "custom";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ReceptionistHome() {
-  const [doctors, setDoctors]     = useState<Doctor[]>([]);
-  const [patients, setPatients]   = useState<Patient[]>([]);
+  const [doctors, setDoctors]       = useState<Doctor[]>([]);
+  const [patients, setPatients]     = useState<Patient[]>([]);
   const [totalPatients, setTotalPatients] = useState(0);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState("");
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState("");
+
   const [statusFilter, setStatusFilter] = useState("All");
+  const [dateFilter, setDateFilter]     = useState<DateFilter>("today");
+  const [customDate, setCustomDate]     = useState(toInputDate(new Date()));
+  const [search, setSearch]             = useState("");
+
+  const customInputRef = useRef<HTMLInputElement>(null);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -107,6 +113,7 @@ export default function ReceptionistHome() {
 
       setDoctors(docRes.data.doctors ?? []);
       setPatients(patRes.data.patients ?? []);
+      // console.log(patRes);
       setTotalPatients(patRes.data.totalPatients ?? 0);
     } catch {
       setError("Failed to load dashboard data. Please try again.");
@@ -119,7 +126,10 @@ export default function ReceptionistHome() {
 
   // ── Derived stats ────────────────────────────────────────────────────────────
 
-  const todayPatients = patients.filter((p) => isToday(p.date));
+  const today     = new Date();
+  const tomorrow  = new Date(today); tomorrow.setDate(today.getDate() + 1);
+
+  const todayPatients = patients.filter((p) => isSameDay(p.date, today));
   const completed     = todayPatients.filter((p) => p.status === "completed").length;
   const pending       = todayPatients.filter((p) => p.status === "pending").length;
   const revenueToday  = todayPatients.reduce((s, p) => s + (p.fees ?? 0), 0);
@@ -159,10 +169,36 @@ export default function ReceptionistHome() {
     },
   ];
 
-  const filters   = ["All", "pending", "completed", "cancelled"];
-  const displayed = todayPatients.filter(
+  // ── Filtered appointments ────────────────────────────────────────────────────
+
+  const dateFiltered = patients.filter((p) => {
+    if (dateFilter === "today")    return isSameDay(p.date, today);
+    if (dateFilter === "tomorrow") return isSameDay(p.date, tomorrow);
+    if (dateFilter === "custom")   return isSameDay(p.date, new Date(customDate));
+    return true; // "all"
+  });
+
+  const statusFiltered = dateFiltered.filter(
     (p) => statusFilter === "All" || p.status === statusFilter
   );
+
+  const q = search.trim().toLowerCase();
+  const displayed = statusFiltered.filter((item) => {
+    if (!q) return true;
+    return (
+      item.patient?.toLowerCase().includes(q) ||
+      item.doctor?.fullName?.toLowerCase().includes(q) ||
+      item.doctor?.specialization?.toLowerCase().includes(q) ||
+      item.mode?.toLowerCase().includes(q) ||
+      item.bookedBy?.toLowerCase().includes(q) ||
+      item.status?.toLowerCase().includes(q) ||
+      String(item.fees).includes(q) ||
+      String(item.tokenNumber ?? "").includes(q) ||
+      new Date(item.date).toLocaleDateString().includes(q)
+    );
+  });
+
+  // ── Time / Date display ───────────────────────────────────────────────────────
 
   const now     = new Date();
   const timeStr = now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
@@ -170,7 +206,15 @@ export default function ReceptionistHome() {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   });
 
-  // ── Loading state ─────────────────────────────────────────────────────────────
+  // ── Date filter label helper ──────────────────────────────────────────────────
+
+  const dateLabel =
+    dateFilter === "today"    ? "Today"
+    : dateFilter === "tomorrow" ? "Tomorrow"
+    : dateFilter === "custom"   ? new Date(customDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+    : "All Dates";
+
+  // ── Loading ───────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -186,7 +230,7 @@ export default function ReceptionistHome() {
     );
   }
 
-  // ── Error state ───────────────────────────────────────────────────────────────
+  // ── Error ─────────────────────────────────────────────────────────────────────
 
   if (error) {
     return (
@@ -206,10 +250,12 @@ export default function ReceptionistHome() {
     );
   }
 
+  const statusFilters = ["All", "pending", "completed", "cancelled"];
+
   // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-6 pb-4">
+    <div className="space-y-6 pb-6">
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -269,33 +315,119 @@ export default function ReceptionistHome() {
         })}
       </div>
 
-      {/* Main grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      {/* Full-width Appointments */}
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
 
-        {/* Today's Appointments table — 2/3 width */}
-        <div className="xl:col-span-2 bg-white border border-gray-200 rounded-xl overflow-hidden">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-4 border-b border-gray-100">
+        {/* Card header */}
+        <div className="px-5 py-4 border-b border-gray-100 space-y-3">
+          {/* Title row */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-2">
               <CalendarDays className="w-4 h-4" style={{ color: "#0c213e" }} />
               <h2 className="text-base font-semibold" style={{ color: "#0c213e" }}>
-                Today's Appointments
+                Appointments
               </h2>
               <span
                 className="text-xs font-medium px-2 py-0.5 rounded-full"
                 style={{ background: "#e8edf4", color: "#0c213e" }}
               >
-                {todayPatients.length}
+                {displayed.length} shown
               </span>
             </div>
+
+            {/* Search */}
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search patient, doctor, token…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-8 pr-8 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Filters row */}
+          <div className="flex flex-wrap items-center gap-2">
+
+            {/* Date filter buttons */}
             <div className="flex gap-1.5 flex-wrap">
-              {filters.map((f) => (
+              {(["today", "tomorrow", "all"] as DateFilter[]).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setDateFilter(f)}
+                  className="text-xs px-3 py-1.5 rounded-full border transition-all duration-150 font-medium capitalize"
+                  style={
+                    dateFilter === f
+                      ? { background: "#0c213e", color: "#fff", borderColor: "#0c213e" }
+                      : { background: "white", color: "#6b7280", borderColor: "#e5e7eb" }
+                  }
+                >
+                  {f === "all" ? "All Dates" : f.charAt(0).toUpperCase() + f.slice(1)}
+                </button>
+              ))}
+
+              {/* Custom date */}
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setDateFilter("custom");
+                    setTimeout(() => customInputRef.current?.showPicker?.(), 50);
+                  }}
+                  className="text-xs px-3 py-1.5 rounded-full border transition-all duration-150 font-medium flex items-center gap-1"
+                  style={
+                    dateFilter === "custom"
+                      ? { background: "#0c213e", color: "#fff", borderColor: "#0c213e" }
+                      : { background: "white", color: "#6b7280", borderColor: "#e5e7eb" }
+                  }
+                >
+                  <CalendarDays className="w-3 h-3" />
+                  {dateFilter === "custom"
+                    ? new Date(customDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })
+                    : "Pick Date"}
+                </button>
+                <input
+                  ref={customInputRef}
+                  type="date"
+                  value={customDate}
+                  onChange={(e) => {
+                    setCustomDate(e.target.value);
+                    setDateFilter("custom");
+                  }}
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full"
+                  tabIndex={-1}
+                />
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="w-px h-5 bg-gray-200 hidden sm:block" />
+
+            {/* Status filters */}
+            <div className="flex gap-1.5 flex-wrap">
+              {statusFilters.map((f) => (
                 <button
                   key={f}
                   onClick={() => setStatusFilter(f)}
-                  className="text-xs px-3 py-1 rounded-full border transition-all duration-150 font-medium capitalize"
+                  className="text-xs px-3 py-1.5 rounded-full border transition-all duration-150 font-medium capitalize"
                   style={
                     statusFilter === f
-                      ? { background: "#0c213e", color: "#fff", borderColor: "#0c213e" }
+                      ? f === "All"
+                        ? { background: "#6b7280", color: "#fff", borderColor: "#6b7280" }
+                        : f === "completed"
+                        ? { background: "#16a34a", color: "#fff", borderColor: "#16a34a" }
+                        : f === "pending"
+                        ? { background: "#d97706", color: "#fff", borderColor: "#d97706" }
+                        : { background: "#dc2626", color: "#fff", borderColor: "#dc2626" }
                       : { background: "white", color: "#6b7280", borderColor: "#e5e7eb" }
                   }
                 >
@@ -303,232 +435,228 @@ export default function ReceptionistHome() {
                 </button>
               ))}
             </div>
+
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[520px]">
-              <thead>
-                <tr className="bg-gray-50">
-                  {["Patient", "Doctor", "Mode", "Fees", "Status", "Time"].map((h) => (
-                    <th
-                      key={h}
-                      className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wide px-5 py-3"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {displayed.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-5 py-10 text-center text-sm text-gray-400">
-                      {todayPatients.length === 0
-                        ? "No appointments scheduled for today."
-                        : "No appointments match this filter."}
-                    </td>
-                  </tr>
-                ) : (
-                  displayed.map((item) => {
-                    const sc = getStatus(item.status);
-                    return (
-                      <tr key={item.bookingId} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-5 py-3">
-                          <div className="flex items-center gap-2.5">
-                            <div
-                              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-white flex-shrink-0"
-                              style={{ background: "#0c213e" }}
-                            >
-                              {initials(item.patient)}
-                            </div>
-                            <span className="text-sm font-medium text-gray-800">
-                              {item.patient}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-5 py-3">
-                          <p className="text-sm text-gray-700">{item.doctor?.fullName ?? "—"}</p>
-                          <p className="text-xs text-gray-400">{item.doctor?.specialization}</p>
-                        </td>
-                        <td className="px-5 py-3 text-sm text-gray-600 capitalize">
-                          {item.mode || item.bookedBy || "—"}
-                        </td>
-                        <td className="px-5 py-3 text-sm text-gray-700">
-                          ₹{item.fees}
-                        </td>
-                        <td className="px-5 py-3">
-                          <span
-                            className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full capitalize"
-                            style={{ background: sc.bg, color: sc.color }}
-                          >
-                            <span
-                              className="w-1.5 h-1.5 rounded-full"
-                              style={{ background: sc.dot }}
-                            />
-                            {item.status}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3">
-                          <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                            <Clock className="w-3.5 h-3.5 text-gray-400" />
-                            {new Date(item.date).toLocaleTimeString("en-IN", {
-                              hour: "2-digit", minute: "2-digit",
-                            })}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="px-5 py-3 border-t border-gray-100 flex justify-end">
-            <button
-              className="text-xs font-medium flex items-center gap-1 hover:underline"
-              style={{ color: "#0c213e" }}
-            >
-              View all patients <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Right column */}
-        <div className="flex flex-col gap-4">
-
-          {/* Clinic Doctors */}
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-            <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
-              <Stethoscope className="w-4 h-4" style={{ color: "#0c213e" }} />
-              <h2 className="text-base font-semibold" style={{ color: "#0c213e" }}>
-                Clinic Doctors
-              </h2>
+          {/* Active filter summary */}
+          {(dateFilter !== "all" || statusFilter !== "All" || search) && (
+            <div className="flex items-center gap-2 flex-wrap text-xs text-gray-500">
+              <span>Showing:</span>
               <span
-                className="text-xs font-medium px-2 py-0.5 rounded-full ml-auto"
+                className="px-2 py-0.5 rounded-full font-medium"
                 style={{ background: "#e8edf4", color: "#0c213e" }}
               >
-                {doctors.length}
+                {dateLabel}
               </span>
+              {statusFilter !== "All" && (
+                <span
+                  className="px-2 py-0.5 rounded-full font-medium capitalize"
+                  style={{ background: "#f3f4f6", color: "#4b5563" }}
+                >
+                  {statusFilter}
+                </span>
+              )}
+              {search && (
+                <span
+                  className="px-2 py-0.5 rounded-full font-medium"
+                  style={{ background: "#f3f4f6", color: "#4b5563" }}
+                >
+                  "{search}"
+                </span>
+              )}
+              <button
+                onClick={() => { setDateFilter("today"); setStatusFilter("All"); setSearch(""); }}
+                className="text-red-400 hover:text-red-600 underline ml-1"
+              >
+                Clear all
+              </button>
             </div>
-            <div className="divide-y divide-gray-50 max-h-64 overflow-y-auto">
-              {doctors.length === 0 ? (
-                <p className="px-5 py-6 text-sm text-gray-400">No doctors found.</p>
-              ) : (
-                doctors.map((doc) => (
-                  <div
-                    key={doc._id}
-                    className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors"
+          )}
+        </div>
+
+        {/* Table — desktop */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full min-w-[700px]">
+            <thead>
+              <tr className="bg-gray-50">
+                {["Token", "Patient", "Doctor", "Mode", "Fees", "Status", "Date & Time"].map((h) => (
+                  <th
+                    key={h}
+                    className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wide px-5 py-3"
                   >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {displayed.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-5 py-12 text-center text-sm text-gray-400">
+                    No appointments match the selected filters.
+                  </td>
+                </tr>
+              ) : (
+                displayed.map((item) => {
+                  const sc = getStatus(item.status);
+                  return (
+                    <tr key={item.bookingId} className="hover:bg-gray-50 transition-colors">
+
+                      {/* Token */}
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <Hash className="w-3.5 h-3.5 text-gray-300" />
+                          <span
+                            className="text-sm font-bold tabular-nums"
+                            style={{ color: "#0c213e" }}
+                          >
+                            {item.tokenNumber ?? "—"}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Patient */}
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-white flex-shrink-0"
+                            style={{ background: "#0c213e" }}
+                          >
+                            {initials(item.patient)}
+                          </div>
+                          <span className="text-sm font-medium text-gray-800">
+                            {item.patient}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Doctor */}
+                      <td className="px-5 py-3">
+                        <p className="text-sm text-gray-700">{item.doctor?.fullName ?? "—"}</p>
+                        <p className="text-xs text-gray-400">{item.doctor?.specialization}</p>
+                      </td>
+
+                      {/* Mode */}
+                      <td className="px-5 py-3 text-sm text-gray-600 capitalize">
+                        {item.mode || item.bookedBy || "—"}
+                      </td>
+
+                      {/* Fees */}
+                      <td className="px-5 py-3 text-sm text-gray-700 font-medium">
+                        ₹{item.fees}
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-5 py-3">
+                        <span
+                          className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full capitalize"
+                          style={{ background: sc.bg, color: sc.color }}
+                        >
+                          <span
+                            className="w-1.5 h-1.5 rounded-full"
+                            style={{ background: sc.dot }}
+                          />
+                          {item.status}
+                        </span>
+                      </td>
+
+                      {/* Date & Time */}
+                      <td className="px-5 py-3">
+                        <p className="text-sm text-gray-700">
+                          {new Date(item.date).toLocaleDateString("en-IN", {
+                            day: "numeric", month: "short", year: "numeric",
+                          })}
+                        </p>
+                        <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
+                          <Clock className="w-3 h-3" />
+                          {new Date(item.date).toLocaleTimeString("en-IN", {
+                            hour: "2-digit", minute: "2-digit",
+                          })}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile cards */}
+        <div className="flex flex-col divide-y divide-gray-100 md:hidden">
+          {displayed.length === 0 ? (
+            <p className="px-5 py-10 text-center text-sm text-gray-400">
+              No appointments match the selected filters.
+            </p>
+          ) : (
+            displayed.map((item) => {
+              const sc = getStatus(item.status);
+              return (
+                <div key={item.bookingId} className="px-5 py-4 space-y-3 hover:bg-gray-50 transition-colors">
+                  {/* Top row */}
+                  <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2.5">
                       <div
                         className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white flex-shrink-0"
                         style={{ background: "#0c213e" }}
                       >
-                        {initials(doc.fullName)}
+                        {initials(item.patient)}
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-800">{doc.fullName}</p>
-                        <p className="text-xs text-gray-400">
-                          {doc.specialization ?? "General"}
-                        </p>
+                        <p className="text-sm font-semibold text-gray-900">{item.patient}</p>
+                        <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
+                          <Hash className="w-3 h-3" />
+                          Token: <span className="font-bold text-gray-700 ml-0.5">{item.tokenNumber ?? "—"}</span>
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      {doc.consultationFee ? (
-                        <p className="text-xs font-semibold" style={{ color: "#0c213e" }}>
-                          ₹{doc.consultationFee}
-                        </p>
-                      ) : null}
-                      {doc.experience ? (
-                        <p className="text-xs text-gray-400">{doc.experience} yrs</p>
-                      ) : null}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Alerts — static, UI context only */}
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <Bell className="w-4 h-4" style={{ color: "#0c213e" }} />
-                <h2 className="text-base font-semibold" style={{ color: "#0c213e" }}>
-                  Alerts
-                </h2>
-              </div>
-              <span
-                className="text-xs font-medium px-2 py-0.5 rounded-full"
-                style={{ background: "#fee2e2", color: "#991b1b" }}
-              >
-                {ALERTS.length} new
-              </span>
-            </div>
-            <div className="divide-y divide-gray-50">
-              {ALERTS.map((n) => {
-                const cfg =
-                  n.type === "success"
-                    ? { Icon: CheckCircle2, color: "#16a34a", bg: "#e6f4ef" }
-                    : n.type === "warning"
-                    ? { Icon: AlertCircle,  color: "#d97706", bg: "#fef3c7" }
-                    : { Icon: Bell,         color: "#2563eb", bg: "#dbeafe" };
-                return (
-                  <div key={n.id} className="flex gap-3 px-5 py-3 hover:bg-gray-50 transition-colors">
-                    <div
-                      className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-                      style={{ background: cfg.bg }}
+                    <span
+                      className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full capitalize shrink-0"
+                      style={{ background: sc.bg, color: sc.color }}
                     >
-                      <cfg.Icon className="w-3.5 h-3.5" style={{ color: cfg.color }} />
-                    </div>
-                    <p className="text-sm text-gray-700 leading-snug">{n.text}</p>
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ background: sc.dot }} />
+                      {item.status}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
-          </div>
 
+                  {/* Doctor */}
+                  <div>
+                    <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Doctor</p>
+                    <p className="text-sm text-gray-700">{item.doctor?.fullName ?? "—"}</p>
+                    {item.doctor?.specialization && (
+                      <p className="text-xs text-gray-400">{item.doctor.specialization}</p>
+                    )}
+                  </div>
+
+                  {/* Bottom row */}
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600 capitalize">{item.mode || item.bookedBy || "—"}</span>
+                    <span className="font-semibold" style={{ color: "#0c213e" }}>₹{item.fees}</span>
+                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                      <Clock className="w-3 h-3" />
+                      {new Date(item.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                      {" · "}
+                      {new Date(item.date).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400">
+          <span>{displayed.length} appointment{displayed.length !== 1 ? "s" : ""} shown</span>
+          <button
+            onClick={() => { setDateFilter("all"); setStatusFilter("All"); setSearch(""); }}
+            className="flex items-center gap-1 hover:underline"
+            style={{ color: "#0c213e" }}
+          >
+            View all <ChevronRight className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
-
-      {/* Summary bar */}
-      {/* <div
-        className="rounded-xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-        style={{ background: "#0c213e" }}
-      > */}
-        {/* <div>
-          <p className="text-white font-semibold text-base">Today's Summary</p>
-          <p className="text-xs mt-0.5" style={{ color: "#93aabf" }}>
-            {dateStr}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-6">
-          {[
-            { label: "Total Bookings", value: todayPatients.length,                              icon: CalendarDays,  color: "#60a5fa" },
-            { label: "Completed",      value: completed,                                          icon: CheckCircle2, color: "#4ade80" },
-            { label: "Pending",        value: pending,                                            icon: Clock,        color: "#fbbf24" },
-            { label: "Revenue",        value: `₹${revenueToday.toLocaleString("en-IN")}`,         icon: Wallet,       color: "#c084fc" },
-          ].map((item) => {
-            const Icon = item.icon;
-            return (
-              <div key={item.label} className="flex items-center gap-2">
-                <Icon className="w-4 h-4" style={{ color: item.color }} />
-                <div>
-                  <p className="text-lg font-bold leading-none" style={{ color: item.color }}>
-                    {item.value}
-                  </p>
-                  <p className="text-xs" style={{ color: "#93aabf" }}>
-                    {item.label}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-        </div> */}
-      
-      {/* </div> */}
-
     </div>
   );
 }

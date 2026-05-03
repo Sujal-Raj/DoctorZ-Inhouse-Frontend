@@ -26,6 +26,7 @@ export default function BookToken() {
     mobileNumber: "",
     aadhar: "",
     date: "",
+    paid: false,
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -112,7 +113,13 @@ export default function BookToken() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
+
+    if (type === "checkbox") {
+      const checked = (e.target as HTMLInputElement).checked;
+      setForm((prev) => ({ ...prev, [name]: checked }));
+      return;
+    }
 
     // Allow only digits for numeric fields
     if (name === "mobileNumber" || name === "aadhar") {
@@ -130,8 +137,8 @@ export default function BookToken() {
     const newErrors: FormErrors = {};
     let isValid = true;
 
-    (Object.keys(form) as (keyof typeof form)[]).forEach((key) => {
-      const msg = validateField(key, form[key]);
+    (["doctorId", "fullName", "gender", "dob", "mobileNumber", "aadhar", "date"] as (keyof FormErrors)[]).forEach((key) => {
+      const msg = validateField(key, form[key as keyof typeof form] as string);
       if (msg) {
         newErrors[key] = msg;
         isValid = false;
@@ -152,6 +159,7 @@ export default function BookToken() {
     try {
       setLoading(true);
       const token = localStorage.getItem("receptionToken");
+      console.log(form.paid)
 
       const res = await api.post(
         "/api/receptionist/book-token",
@@ -163,6 +171,7 @@ export default function BookToken() {
           mobileNumber: form.mobileNumber,
           aadhar: form.aadhar || undefined,
           date: form.date,
+          paid: form.paid,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -179,6 +188,7 @@ export default function BookToken() {
         mobileNumber: "",
         aadhar: "",
         date: "",
+        paid: false,
       });
       setErrors({});
     } catch (err: any) {
@@ -188,7 +198,6 @@ export default function BookToken() {
     }
   };
 
-  // Today's date string for min/max constraints
   const todayStr = new Date().toISOString().split("T")[0];
   const maxDateStr = (() => {
     const d = new Date();
@@ -370,6 +379,58 @@ export default function BookToken() {
             {errors.date && (
               <p className="text-red-500 text-xs mt-1">{errors.date}</p>
             )}
+          </div>
+
+          {/* Paid Checkbox */}
+          <div className="md:col-span-2">
+            <label
+              className={`flex items-center gap-3 cursor-pointer select-none w-fit px-4 py-3 rounded-lg border transition-all ${
+                form.paid
+                  ? "border-green-400 bg-green-50"
+                  : "border-gray-200 bg-gray-50"
+              }`}
+            >
+              <div className="relative flex items-center">
+                <input
+                  type="checkbox"
+                  name="paid"
+                  checked={form.paid}
+                  onChange={handleChange}
+                  className="sr-only"
+                />
+                <div
+                  className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-all ${
+                    form.paid
+                      ? "bg-green-500 border-green-500"
+                      : "bg-white border-gray-300"
+                  }`}
+                >
+                  {form.paid && (
+                    <svg
+                      className="w-3 h-3 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={3}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  )}
+                </div>
+              </div>
+              <div>
+                <p className={`text-sm font-medium ${form.paid ? "text-green-700" : "text-gray-700"}`}>
+                  Mark as Paid
+                </p>
+                <p className="text-xs text-gray-400">
+                  Check if the patient has paid the consultation fee
+                </p>
+              </div>
+            </label>
           </div>
 
           {/* Submit */}

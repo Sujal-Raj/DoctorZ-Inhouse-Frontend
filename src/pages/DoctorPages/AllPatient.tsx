@@ -313,7 +313,7 @@ const AllPatient: React.FC = () => {
   const chatColor = "#b434ef"; // Purple
 
   return (
-    <main className="min-h-screen bg-gray-50 py-6 overflow-hidden font-[Poppins]">
+    <main className="min-h-screen bg-gray-50 py-6 overflow-hidden">
       <title>Doctor Patients | Dashboard</title>
 
       <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 max-w-[1400px] mx-auto">
@@ -322,13 +322,13 @@ const AllPatient: React.FC = () => {
         <div className="sticky top-0 bg-gray-50 pb-3 z-30 border-b border-gray-200">
 
           <h1
-            className="text-3xl sm:text-5xl font-bold text-center lg:text-left mb-2"
+            className="text-3xl sm:text-3xl font-bold text-center lg:text-left mb-2"
             style={{ color: themeColor }}
           >
             All Patients
           </h1>
 
-          <p className="text-gray-600 text-base sm:text-lg text-center lg:text-left">
+          <p className="text-gray-600 text-base sm:text-base text-center lg:text-left">
             View patients, check EMR, call, or chat instantly
           </p>
 
