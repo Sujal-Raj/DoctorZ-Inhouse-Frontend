@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Home, User, UserPlus, Users, LogOut, Menu, X, Building2 } from "lucide-react";
+import { Home, User, UserPlus, Users, LogOut, Menu, X, Building2,ShelvingUnit, Wallet } from "lucide-react";
 
 interface MenuItem {
   name: string;
@@ -49,6 +49,16 @@ const ClinicSidebar: React.FC = () => {
       name: "Patients",
       path: "all-clinic-patients",
       icon: <Users className="w-5 h-5" />,
+    },
+    {
+      name: "Inventory",
+      path: "inventory-management",
+      icon: <ShelvingUnit className="w-5 h-5" />,
+    },
+    {
+      name: "Expenses",
+      path: "expense-management",
+      icon: <Wallet className="w-5 h-5" />,
     },
   ];
 

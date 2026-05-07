@@ -37,6 +37,8 @@ import LoginReceptionist from './pages/LoginPages/LoginReceptionist';
 import ReceptionistDashboard from './pages/ReceptionistPages/ReceptionistDashboard';
 import RegisterLab from './pages/RegisterPages/RegisterLab';
 import HomeLandingPage from './components/LandingPage';
+import InventoryManagement from './pages/ClinicPages/InventoryManagement';
+import ExpenseManagement from './pages/ClinicPages/ExpenseManagement';
 
 
 function App() {
@@ -112,6 +114,8 @@ function App() {
             <Route path="add-doctor" element={<AddDoctor />} />
             <Route path="all-clinic-doctors" element={<ClinicDoctors />} />
             <Route path="all-clinic-patients" element={<AllClinicPatients />} />
+            <Route path="inventory-management" element={<InventoryManagement />} />
+            <Route path="expense-management" element={<ExpenseManagement />} />
           </Route>
 
           <Route path='/receptionist-login' element={<LoginReceptionist/>}/>
