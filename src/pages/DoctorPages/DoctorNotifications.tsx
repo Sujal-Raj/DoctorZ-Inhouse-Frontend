@@ -90,7 +90,7 @@ const DoctorNotifications: React.FC = () => {
       <div className="bg-[#0c213e]/10 p-3 rounded-full">
         <Bell className="text-[#0c213e]" size={26} />
       </div>
-      <h1 className="text-3xl font-extrabold text-[#0c213e] tracking-tight">
+      <h1 className="text-3xl font-bold text-[#0c213e] tracking-tight">
         Notifications
       </h1>
     </div>
