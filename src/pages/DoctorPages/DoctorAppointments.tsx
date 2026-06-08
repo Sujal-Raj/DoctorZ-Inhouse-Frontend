@@ -16,18 +16,16 @@ import { useNavigate } from "react-router-dom";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Patient {
-  name:string;
-  fullName: string;
+  name: string;
   age: number;
   gender: string;
-  contact: string;
+  contact: string | number;
   aadhar?: string;
 }
 
 interface OnlineBooking {
   _id: string;
   patient: Patient;
-  // patient: string;
   dateTime: string;
   fees: number;
   mode: "online" | "offline";
@@ -41,7 +39,7 @@ interface OfflineBooking {
   tokenNumber: number;
   fees: number;
   status: "pending" | "completed" | "cancelled";
-  paid:boolean;
+  paid: boolean;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -162,8 +160,7 @@ const OfflineBookingCard = ({
 }: {
   b: OfflineBooking;
   onComplete: (id: string) => void;
-    onPrescription: (b: OnlineBooking) => void;
-
+  onPrescription: (b: OfflineBooking) => void;
 }) => {
   const formattedDate = new Date(b.date).toLocaleDateString("en-IN", {
     day: "2-digit", month: "long", year: "numeric",
@@ -186,8 +183,8 @@ const OfflineBookingCard = ({
           <UserIcon className="text-gray-500 w-5 h-5" />
           <h3 className="text-base font-semibold text-gray-900 capitalize">{b.patient}</h3>
         </div>
-        {/* <p className="text-gray-500 text-sm ml-7">{b.patient} yrs • {b.patient}</p> */}
-        {/* <p className="text-gray-500 text-sm ml-7 mt-4">Booked by: {b.paid}</p> */}
+        {/* <p className="text-gray-500 text-sm ml-7">{b.patient.age} yrs • {b.patient?.gender}</p> */}
+        <p className="text-gray-500 text-sm ml-7 capitalize">BookedBy: {b.bookedBy}</p>
       </div>
 
       {/* Appointment details */}
@@ -216,12 +213,6 @@ const OfflineBookingCard = ({
             <CheckIcon className="w-4 h-4" />
             Complete Appointment
           </button>
-          <button
-          onClick={() => onPrescription(b)}
-          className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg text-sm font-medium transition mt-2 cursor-pointer"
-        >
-          Give Prescription
-        </button>
         </div>
       )}
     </div>
@@ -269,6 +260,7 @@ export default function DoctorAppointments() {
       const { data } = await api.get<{ bookings: OnlineBooking[] }>(
         `/api/booking/doctor/${doctorId}`
       );
+      
       if (data.bookings?.length > 0) {
         const { today, startOfWeek, endOfWeek } = getWeekBounds();
 
@@ -304,7 +296,7 @@ export default function DoctorAppointments() {
       const { data } = await api.get<{ bookings: OfflineBooking[] }>(
         `/api/bookOffline/doctor/${doctorId}`
       );
-      // console.log(data)
+      
       if (data.bookings?.length > 0) {
         setOfflineBookings(
           sortByDate(data.bookings, (b) => new Date(b.date))
@@ -377,6 +369,10 @@ export default function DoctorAppointments() {
     (b) => b.date.slice(0, 10) > endOfWeekStr
   );
 
+  // ✅ Total future appointments count for each tab
+  const totalFutureOffline = todayOffline.length + weekOffline.length + upcomingOffline.length;
+  const totalFutureOnline = todayOnline.length + weekOnline.length + upcomingOnline.length;
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -390,16 +386,12 @@ export default function DoctorAppointments() {
     );
   }
 
-  const hasOnline = onlineBookings.length > 0;
-  const hasOffline = offlineBookings.length > 0;
-
   return (
     <div className="p-4 ml-5 lg:p-8 flex flex-col w-full">
       <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-6 text-gray-800">Appointments</h2>
 
       {/* ── Tab switcher ── */}
       <div className="flex gap-2 mb-8">
-
         <button
           onClick={() => setActiveTab("offline")}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
@@ -410,9 +402,10 @@ export default function DoctorAppointments() {
         >
           <BuildingStorefrontIcon className="w-4 h-4" />
           Walk-in
-          {hasOffline && (
+          {/* ✅ Shows count only if there are future appointments, otherwise no badge */}
+          {totalFutureOffline > 0 && (
             <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-bold ${activeTab === "offline" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-600"}`}>
-              {offlineBookings.length}
+              {totalFutureOffline}
             </span>
           )}
         </button>
@@ -426,9 +419,10 @@ export default function DoctorAppointments() {
         >
           <VideoCameraIcon className="w-4 h-4" />
           Online
-          {hasOnline && (
+          {/* ✅ Shows count only if there are future appointments, otherwise no badge */}
+          {totalFutureOnline > 0 && (
             <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-bold ${activeTab === "online" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-600"}`}>
-              {onlineBookings.length}
+              {totalFutureOnline}
             </span>
           )}
         </button>
@@ -437,7 +431,8 @@ export default function DoctorAppointments() {
       {/* ── Online tab ── */}
       {activeTab === "online" && (
         <>
-          {!hasOnline ? (
+          {/* ✅ Shows "No online appointments" when no future appointments */}
+          {totalFutureOnline === 0 ? (
             <div className="text-center text-gray-500 py-10 text-lg">No online appointments</div>
           ) : (
             <>
@@ -500,7 +495,8 @@ export default function DoctorAppointments() {
       {/* ── Offline (Walk-in) tab ── */}
       {activeTab === "offline" && (
         <>
-          {!hasOffline ? (
+          {/* ✅ Shows "No walk-in appointments" when no future appointments */}
+          {totalFutureOffline === 0 ? (
             <div className="text-center text-gray-500 py-10 text-lg">No walk-in appointments</div>
           ) : (
             <>
@@ -508,36 +504,51 @@ export default function DoctorAppointments() {
                 title="Today's Walk-ins"
                 list={todayOffline}
                 renderCard={(b) => (
-                  <OfflineBookingCard key={b._id} b={b} onComplete={completeOffline} onPrescription={(b) =>
+                  <OfflineBookingCard
+                    key={b._id}
+                    b={b}
+                    onComplete={completeOffline}
+                    onPrescription={(b) =>
                       navigate(
                         `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
                         { state: { name: b.patient?.name, gender: b.patient?.gender } }
                       )
-                    }/>
+                    }
+                  />
                 )}
               />
               <SectionGroup
                 title="This Week's Walk-ins"
                 list={weekOffline}
                 renderCard={(b) => (
-                  <OfflineBookingCard key={b._id} b={b} onComplete={completeOffline} onPrescription={(b) =>
+                  <OfflineBookingCard
+                    key={b._id}
+                    b={b}
+                    onComplete={completeOffline}
+                    onPrescription={(b) =>
                       navigate(
                         `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
                         { state: { name: b.patient?.name, gender: b.patient?.gender } }
                       )
-                    }/>
+                    }
+                  />
                 )}
               />
               <SectionGroup
                 title="Upcoming Walk-ins"
                 list={upcomingOffline}
                 renderCard={(b) => (
-                  <OfflineBookingCard key={b._id} b={b} onComplete={completeOffline} onPrescription={(b) =>
+                  <OfflineBookingCard
+                    key={b._id}
+                    b={b}
+                    onComplete={completeOffline}
+                    onPrescription={(b) =>
                       navigate(
                         `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
                         { state: { name: b.patient?.name, gender: b.patient?.gender } }
                       )
-                    }/>
+                    }
+                  />
                 )}
               />
             </>
