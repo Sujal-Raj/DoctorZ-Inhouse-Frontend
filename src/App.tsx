@@ -3,7 +3,7 @@ import { Route, Routes } from 'react-router-dom'
 import { Toaster } from "react-hot-toast";
 import { ToastContainer } from "react-toastify";
 
-import Navbar from './components/Navbar'
+// import Navbar from './components/Navbar'
 import RegisterPatient from './pages/RegisterPages/RegisterPatient'
 import RegisterDoctor from './pages/RegisterPages/RegisterDoctor'
 import RegisterClinic from './pages/RegisterPages/RegisterClinic'

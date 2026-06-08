@@ -365,7 +365,7 @@ export default function ReceptionistHome() {
                 <button
                   key={f}
                   onClick={() => setDateFilter(f)}
-                  className="text-xs px-3 py-1.5 rounded-full border transition-all duration-150 font-medium capitalize"
+                  className="text-xs px-3 py-1.5 rounded-full border transition-all duration-150 font-medium capitalize cursor-pointer"
                   style={
                     dateFilter === f
                       ? { background: "#0c213e", color: "#fff", borderColor: "#0c213e" }
