@@ -205,7 +205,7 @@ export default function AddDoctor() {
                       <button
                         key={opt.key}
                         onClick={() => setGenderFilter(opt.key)}
-                        className={`py-2 px-4 rounded-xl text-sm font-medium transition-all ${
+                        className={`py-2 px-3 rounded-xl text-sm font-medium transition-all ${
                           genderFilter === opt.key
                             ? "bg-[#0c213e] text-white shadow-lg scale-105"
                             : "bg-gray-100 text-gray-700 hover:bg-gray-200"

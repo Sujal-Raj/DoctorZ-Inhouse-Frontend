@@ -98,7 +98,7 @@ Swal.fire({
   {/* IMAGE */}
   {doctor.photo ? (
     <img
-      src={`http://localhost:3000/uploads/${doctor.photo}`}
+      src={`${doctor.photo}`}
       alt={doctor.fullName}
       className="w-32 h-32 rounded-lg object-cover border mb-4"
     />

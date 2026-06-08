@@ -209,13 +209,13 @@ const ClinicDoctors = () => {
                   key={doctor._id}
                   onMouseEnter={() => setHoveredCard(doctor._id)}
                   onMouseLeave={() => setHoveredCard(null)}
-                  onClick={() => navigate(`clinic-doctor-profile/${doctor._id}`)}
+                  // onClick={() => navigate(`clinic-doctor-profile/${doctor._id}`)}
                   className="group bg-white rounded-2xl border border-gray-200 overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1"
                 >
                   {/* Image */}
                   <div className="relative h-56 overflow-hidden bg-gray-100">
                     <img
-                      src={doctor.photo ? `http://localhost:3000/uploads/${doctor.photo}` : "/api/placeholder/400/400"}
+                      src={doctor.photo ? `${doctor.photo}` : "/api/placeholder/400/400"}
                       alt={doctor.fullName}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     />
@@ -252,11 +252,11 @@ const ClinicDoctors = () => {
 
                     {/* Action Button */}
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`clinic-doctor-profile/${doctor._id}`);
-                      }}
-                      className="mt-4 w-full py-2 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-[#0c213e] hover:text-white transition-all group-hover:bg-[#0c213e] group-hover:text-white"
+                      // onClick={(e) => {
+                      //   e.stopPropagation();
+                      //   navigate(`clinic-doctor-profile/${doctor._id}`);
+                      // }}
+                      className="mt-4 w-full py-2 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-[#0c213e] hover:text-white transition-all group-hover:bg-[#0c213e] group-hover:text-white cursor-pointer"
                     >
                       View Details
                     </button>
