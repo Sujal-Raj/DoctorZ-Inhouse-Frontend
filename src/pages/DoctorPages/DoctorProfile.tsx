@@ -444,7 +444,7 @@ const DoctorProfile: React.FC = () => {
                   <div>
                     <label className={labelClass}>Degree Certificate</label>
                     <a
-                      href={`http://localhost:3000/uploads/${doctor.DegreeCertificate}`}
+                      href={`${doctor.DegreeCertificate}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#0c213e] hover:bg-[#0a1a32] text-white rounded-lg font-medium transition-colors shadow-lg shadow-[#0c213e]/20"

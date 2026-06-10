@@ -246,7 +246,7 @@ function SectionGroup<T,>({
 export default function DoctorAppointments() {
   const [onlineBookings, setOnlineBookings] = useState<OnlineBooking[]>([]);
   const [offlineBookings, setOfflineBookings] = useState<OfflineBooking[]>([]);
-  const [activeTab, setActiveTab] = useState<"online" | "offline">("online");
+  const [activeTab, setActiveTab] = useState<"online" | "offline">("offline");
   const [loading, setLoading] = useState(true);
 
   const doctorId = localStorage.getItem("doctorId");
