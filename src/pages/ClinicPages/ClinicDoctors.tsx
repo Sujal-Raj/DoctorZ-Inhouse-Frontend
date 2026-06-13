@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useOutletContext, useNavigate } from "react-router-dom";
+import { useOutletContext } from "react-router-dom";
 import api from "../../Services/mainApi";
 import { 
   UserGroupIcon,
@@ -45,7 +45,6 @@ const ClinicDoctors = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchDoctors = async () => {
@@ -81,7 +80,7 @@ const ClinicDoctors = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-[#0c213e] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading doctors...</p>
@@ -91,7 +90,7 @@ const ClinicDoctors = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
@@ -106,7 +105,7 @@ const ClinicDoctors = () => {
             </div>
 
             {/* Search Bar */}
-            <div className="w-full lg:w-[400px]">
+            <div className="w-full lg:w-100">
               <div className="relative group">
                 <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-[#0c213e] transition-colors" />
                 <input
@@ -122,7 +121,7 @@ const ClinicDoctors = () => {
 
           {/* Stats */}
           <div className="mt-6 grid grid-cols-3 gap-4">
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-xl p-4 border border-blue-200">
+            <div className="bg-linear-to-br from-blue-50 to-blue-100/50 rounded-xl p-4 border border-blue-200">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-500 rounded-lg">
                   <UserGroupIcon className="w-5 h-5 text-white" />
@@ -134,7 +133,7 @@ const ClinicDoctors = () => {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-green-50 to-green-100/50 rounded-xl p-4 border border-green-200">
+            <div className="bg-linear-to-br from-green-50 to-green-100/50 rounded-xl p-4 border border-green-200">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-green-500 rounded-lg">
                   <CheckCircleIcon className="w-5 h-5 text-white" />
@@ -146,7 +145,7 @@ const ClinicDoctors = () => {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-xl p-4 border border-gray-200">
+            <div className="bg-linear-to-br from-gray-50 to-gray-100/50 rounded-xl p-4 border border-gray-200">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-gray-500 rounded-lg">
                   <XCircleIcon className="w-5 h-5 text-white" />
@@ -231,7 +230,7 @@ const ClinicDoctors = () => {
                     </div>
 
                     {/* Hover Overlay */}
-                    <div className={`absolute inset-0 bg-gradient-to-t from-[#0c213e] via-[#0c213e]/50 to-transparent transition-opacity duration-300 ${
+                    <div className={`absolute inset-0 bg-linear-to-t from-[#0c213e] via-[#0c213e]/50 to-transparent transition-opacity duration-300 ${
                       hoveredCard === doctor._id ? "opacity-100" : "opacity-0"
                     }`}>
                       <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between text-white">

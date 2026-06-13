@@ -2,7 +2,6 @@
 import { useState } from "react";
 import Sidebar from "./ReceptionistDashboardSidebar";
 import DashboardHome from "./ReceptionistHome";
-import Appointments from "./WalkInRegistration";
 import Doctors from "./ReceptionistDoctors";
 import ReceptionistBookToken from "./ReceptionistBookToken";
 import ReceptionistPatients from "./ReceptionistPatients";

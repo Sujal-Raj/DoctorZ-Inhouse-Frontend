@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import api from "../../Services/mainApi";
 import { toast, Toaster } from "react-hot-toast";
 
-const PRIMARY = "#0C213E";
+// const PRIMARY = "#0C213E";
 
 interface Doctor {
   _id: string;
@@ -25,7 +24,6 @@ interface Doctor {
 }
 
 const DoctorProfile: React.FC = () => {
-  const navigate = useNavigate();
   const storedDoctorId = localStorage.getItem("doctorId");
   const [newPhoto, setNewPhoto] = useState<File | null>(null);
 
@@ -506,7 +504,7 @@ const DoctorProfile: React.FC = () => {
             </div>
 
             {/* Quick Stats */}
-            <div className="bg-gradient-to-br from-[#0c213e] to-[#1a3a5f] rounded-xl shadow-sm p-6 text-white">
+            <div className="bg-linear-to-br from-[#0c213e] to-[#1a3a5f] rounded-xl shadow-sm p-6 text-white">
               <h3 className="text-lg font-semibold mb-4">Quick Stats</h3>
               <div className="space-y-3">
                 <div className="flex items-center justify-between pb-3 border-b border-white/20">

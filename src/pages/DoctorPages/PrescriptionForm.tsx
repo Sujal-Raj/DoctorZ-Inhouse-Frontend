@@ -387,7 +387,7 @@ const PrescriptionForm: React.FC = () => {
                       onClick={addMedicineChip}
                       disabled={!medicineName.trim() || !medicineDosage.trim()}
                       title="Add medicine"
-                      className="flex-shrink-0 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-200 disabled:cursor-not-allowed text-white rounded-lg transition"
+                      className="shrink-0 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-200 disabled:cursor-not-allowed text-white rounded-lg transition"
                     >
                       <Plus size={15} />
                     </button>

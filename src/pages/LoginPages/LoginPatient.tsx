@@ -4,7 +4,7 @@ import { Helmet } from "react-helmet";
 import Cookies from "js-cookie";
 import { Eye, EyeOff } from "lucide-react";
 import { loginPatient } from "../../Services/patientApi";
-import { AuthContext } from "../../Context/AuthContext";
+import { AuthContext } from "../../context/AuthContext";
 
 export default function LoginPatient() {
   const [email, setEmail] = useState("");

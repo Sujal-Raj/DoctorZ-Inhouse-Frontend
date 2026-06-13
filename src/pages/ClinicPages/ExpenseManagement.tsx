@@ -16,10 +16,10 @@ import {
   DevicePhoneMobileIcon,
   BuildingLibraryIcon,
   CurrencyRupeeIcon,
-  CalendarDaysIcon,
-  TagIcon,
-  UserIcon,
-  DocumentTextIcon,
+  // CalendarDaysIcon,
+  // TagIcon,
+  // UserIcon,
+  // DocumentTextIcon,
   ChartBarIcon,
 } from "@heroicons/react/24/outline";
 
@@ -331,7 +331,7 @@ export default function ExpenseManagement() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-[#0c213e] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-gray-600">Loading expenses...</p>
@@ -349,12 +349,12 @@ export default function ExpenseManagement() {
         <title>Expense Management</title>
       </Helmet>
 
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 lg:p-8">
+      <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto space-y-6">
 
           {/* ── Header ── */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="bg-gradient-to-r from-[#0c213e] to-[#1a3a5f] px-6 sm:px-8 py-8">
+            <div className="bg-linear-to-r from-[#0c213e] to-[#1a3a5f] px-6 sm:px-8 py-8">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-white/10 rounded-xl backdrop-blur-sm">
@@ -533,7 +533,7 @@ export default function ExpenseManagement() {
                           <td className="px-5 py-4 text-gray-600">
                             {expense.addedBy || "-"}
                           </td>
-                          <td className="px-5 py-4 text-gray-500 max-w-[180px] truncate">
+                          <td className="px-5 py-4 text-gray-500 max-w-45 truncate">
                             {expense.description || "-"}
                           </td>
                           <td className="px-5 py-4">
@@ -652,7 +652,7 @@ export default function ExpenseManagement() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center z-50 p-4 py-8 overflow-y-auto animate-fadeIn">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl animate-scaleIn">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-[#0c213e] to-[#1a3a5f] px-6 py-5 rounded-t-2xl flex items-center justify-between">
+            <div className="bg-linear-to-r from-[#0c213e] to-[#1a3a5f] px-6 py-5 rounded-t-2xl flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-white/10 rounded-xl">
                   {editExpense ? (

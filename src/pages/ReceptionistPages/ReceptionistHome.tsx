@@ -6,7 +6,7 @@ import {
   Users,
   Activity,
   Clock,
-  CheckCircle2,
+  // CheckCircle2,
   AlertCircle,
   Stethoscope,
   TrendingUp,
@@ -476,7 +476,7 @@ export default function ReceptionistHome() {
 
         {/* Table — desktop */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="w-full min-w-[700px]">
+          <table className="w-full min-w-175">
             <thead>
               <tr className="bg-gray-50">
                 {["Token", "Patient", "Doctor", "Mode", "Fees", "Status", "Date & Time"].map((h) => (
@@ -519,7 +519,7 @@ export default function ReceptionistHome() {
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-2.5">
                           <div
-                            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-white flex-shrink-0"
+                            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-white shrink-0"
                             style={{ background: "#0c213e" }}
                           >
                             {initials(item.patient)}
@@ -597,7 +597,7 @@ export default function ReceptionistHome() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2.5">
                       <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white flex-shrink-0"
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white shrink-0"
                         style={{ background: "#0c213e" }}
                       >
                         {initials(item.patient)}

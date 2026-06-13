@@ -35,6 +35,7 @@ interface OnlineBooking {
 interface OfflineBooking {
   _id: string;
   patient: Patient;
+  bookedBy?: string;
   date: string;          // "YYYY-MM-DD"
   tokenNumber: number;
   fees: number;
@@ -156,11 +157,9 @@ const OnlineBookingCard = ({
 const OfflineBookingCard = ({
   b,
   onComplete,
-  onPrescription,
 }: {
   b: OfflineBooking;
   onComplete: (id: string) => void;
-  onPrescription: (b: OfflineBooking) => void;
 }) => {
   const formattedDate = new Date(b.date).toLocaleDateString("en-IN", {
     day: "2-digit", month: "long", year: "numeric",
@@ -181,10 +180,10 @@ const OfflineBookingCard = ({
       <div>
         <div className="flex items-center gap-2">
           <UserIcon className="text-gray-500 w-5 h-5" />
-          <h3 className="text-base font-semibold text-gray-900 capitalize">{b.patient}</h3>
+          <h3 className="text-base font-semibold text-gray-900 capitalize">{b.patient?.name ?? "Walk-in Patient"}</h3>
         </div>
-        {/* <p className="text-gray-500 text-sm ml-7">{b.patient.age} yrs • {b.patient?.gender}</p> */}
-        <p className="text-gray-500 text-sm ml-7 capitalize">BookedBy: {b.bookedBy}</p>
+        <p className="text-gray-500 text-sm ml-7">{b.patient?.age ? `${b.patient.age} yrs • ` : ""}{b.patient?.gender ?? ""}</p>
+        <p className="text-gray-500 text-sm ml-7 capitalize">BookedBy: {b.bookedBy ?? "Reception"}</p>
       </div>
 
       {/* Appointment details */}
@@ -508,12 +507,6 @@ export default function DoctorAppointments() {
                     key={b._id}
                     b={b}
                     onComplete={completeOffline}
-                    onPrescription={(b) =>
-                      navigate(
-                        `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
-                        { state: { name: b.patient?.name, gender: b.patient?.gender } }
-                      )
-                    }
                   />
                 )}
               />
@@ -525,12 +518,6 @@ export default function DoctorAppointments() {
                     key={b._id}
                     b={b}
                     onComplete={completeOffline}
-                    onPrescription={(b) =>
-                      navigate(
-                        `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
-                        { state: { name: b.patient?.name, gender: b.patient?.gender } }
-                      )
-                    }
                   />
                 )}
               />
@@ -542,12 +529,6 @@ export default function DoctorAppointments() {
                     key={b._id}
                     b={b}
                     onComplete={completeOffline}
-                    onPrescription={(b) =>
-                      navigate(
-                        `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
-                        { state: { name: b.patient?.name, gender: b.patient?.gender } }
-                      )
-                    }
                   />
                 )}
               />

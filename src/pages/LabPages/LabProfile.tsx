@@ -37,7 +37,7 @@ interface UpdateLabResponse {
   lab: Lab;
 }
 
-const PRIMARY = "#0C213E";
+// const PRIMARY = "#0C213E";
 
 const LabProfile = () => {
   const { labId: contextLabId } = useOutletContext<LabDashboardContext>();

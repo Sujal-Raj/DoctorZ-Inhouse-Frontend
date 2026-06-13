@@ -16,9 +16,6 @@ import {
   MagnifyingGlassIcon,
   FunnelIcon,
   ExclamationTriangleIcon,
-  CalendarIcon,
-  TagIcon,
-  BuildingStorefrontIcon,
   ArchiveBoxIcon,
 } from "@heroicons/react/24/outline";
 

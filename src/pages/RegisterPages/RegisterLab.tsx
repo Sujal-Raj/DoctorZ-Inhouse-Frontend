@@ -19,7 +19,7 @@ interface Lab {
 }
 
 export default function RegisterLab() {
-  const [pincodeError, setPincodeError] = useState("");
+  const [, setPincodeError] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [currentStep, setCurrentStep] = useState(() => {
@@ -350,7 +350,7 @@ export default function RegisterLab() {
         }}
       />
 
-      <main className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-sky-50 flex items-center justify-center px-6 ">
+      <main className="min-h-screen bg-linear-to-br from-indigo-50 via-white to-sky-50 flex items-center justify-center px-6 ">
         <section className="w-full max-w-3xl bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-gray-100 p-10 animate-fade-in">
           
           {/* Progress Bar */}
@@ -375,7 +375,7 @@ export default function RegisterLab() {
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
               <div
-                className="bg-gradient-to-r from-[#0c213e] to-[#0c213e]/80 h-3 rounded-full transition-all duration-300 ease-in-out"
+                className="bg-linear-to-r from-[#0c213e] to-[#0c213e]/80 h-3 rounded-full transition-all duration-300 ease-in-out"
                 style={{ width: `${progressPercentage}%` }}
               />
             </div>

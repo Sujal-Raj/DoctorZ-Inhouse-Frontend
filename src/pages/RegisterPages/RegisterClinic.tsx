@@ -96,10 +96,6 @@ const RegisterClinic: React.FC = () => {
     "email", "operatingHours", "licenseNo", "ownerAadhar", "ownerPan"
   ];
   
-  const step4Fields: (keyof ClinicFormInputs)[] = [
-    "staffName", "staffEmail", "staffPassword"
-  ];
-
   const generateStaffID = (length = 8) => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     return Array.from({ length }, () =>

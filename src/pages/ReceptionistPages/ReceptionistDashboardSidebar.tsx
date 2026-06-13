@@ -9,7 +9,7 @@ import {
   Menu,
   X,
   Building2,
-  UserPlus,
+  // UserPlus,
 } from "lucide-react";
 
 interface Props {
@@ -86,7 +86,7 @@ export default function Sidebar({ activeTab, setActiveTab }: Props) {
           z-40
           w-72 h-[calc(100vh-57px)] md:h-full
           transform transition-all duration-300
-          top-[57px] md:top-0
+          top-14.25 md:top-0
           flex flex-col
           ${
             sidebarOpen
