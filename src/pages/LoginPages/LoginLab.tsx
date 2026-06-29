@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Helmet } from "react-helmet";
 import { Eye, EyeOff } from "lucide-react";
 import { loginLab } from "../../Services/labApi";
+import LoginNavbar from "./LoginNavbar";
 
 
 export default function LoginLab() {
@@ -59,6 +60,7 @@ export default function LoginLab() {
         />
         <meta name="robots" content="index, follow" />
       </Helmet>
+      <LoginNavbar/>
 
       {/* UI */}
       <div className="fixed inset-0 flex items-center justify-center bg-white z-40">

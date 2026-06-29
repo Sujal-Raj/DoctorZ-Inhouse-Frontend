@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { Eye, EyeOff } from "lucide-react";
 import api from "../../Services/mainApi";
+import LoginNavbar from "./LoginNavbar";
 
 interface LoginResponse {
   message: string;
@@ -82,6 +83,7 @@ export default function LoginReceptionist() {
       </Helmet>
 
       <div className="fixed inset-0 flex items-center justify-center bg-white z-40">
+      <LoginNavbar/>
         <div className="w-[90%] max-w-md bg-white rounded-2xl shadow-lg border border-[#dfe3f7] p-8 sm:p-10 text-center transition-all duration-300">
 
           <h1 className="text-3xl sm:text-4xl font-bold text-black mb-3">

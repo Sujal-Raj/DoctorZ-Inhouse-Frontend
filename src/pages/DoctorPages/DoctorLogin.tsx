@@ -58,7 +58,7 @@ export default function DoctorLogin() {
       </Helmet>
       {/* <div className="w-full h-full"><canvas width="843" height="552" style ="width: 100%; height: 100%;"></canvas></div> */}
 
-      <div className="fixed inset-0 flex items-center justify-center bg-white z-10">
+      <div className="min-h-screen flex items-center justify-center bg-white pt-16">
         <div className="w-[90%] max-w-md bg-white rounded-2xl shadow-lg border border-[#dfe3f7] p-8 sm:p-10 text-center">
           <h1 className="text-3xl font-bold text-black mb-3">Doctor Login</h1>
 

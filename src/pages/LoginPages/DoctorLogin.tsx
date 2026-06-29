@@ -4,6 +4,7 @@ import { Helmet } from "react-helmet";
 import Cookies from "js-cookie";
 import { Eye, EyeOff } from "lucide-react";
 import { loginDoctor } from "../../Services/doctorApi";
+import LoginNavbar from "./LoginNavbar";
 
 export default function DoctorLogin() {
   const [doctorId, setDoctorId] = useState("");
@@ -56,6 +57,7 @@ export default function DoctorLogin() {
       <Helmet>
         <title>Doctor Login | DoctorZ Healthcare</title>
       </Helmet>
+      <LoginNavbar/>
       {/* <div className="w-full h-full"><canvas width="843" height="552" style ="width: 100%; height: 100%;"></canvas></div> */}
 
       <div className="fixed inset-0 flex items-center justify-center bg-white z-10">
