@@ -216,7 +216,7 @@ const OfflineBookingCard = ({
           </button>
           <button
             onClick={() => onPrescription(b)}
-            className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg text-sm font-medium transition"
+            className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg text-sm font-medium transition mt-2"
           >
             Give Prescription
           </button>
@@ -515,11 +515,14 @@ export default function DoctorAppointments() {
                     key={b._id}
                     b={b}
                     onComplete={completeOffline}
-                    onPrescription={(b) =>
+                    onPrescription={(b) =>{
+                        console.log(b);
+  console.log("Aadhar:", b.patient?.aadhar);
                       navigate(
                         `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
                         { state: { name: b.patient?.name, gender: b.patient?.gender } }
                       )
+                    }
                     }
                   />
                 )}

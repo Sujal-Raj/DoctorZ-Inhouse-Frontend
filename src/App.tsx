@@ -71,10 +71,14 @@ function App() {
               element={<DoctorDashboardHome />}
             />
             <Route path="appointments" element={<DoctorAppointments />} />
-            <Route
+            {/* <Route
               path="appointments/addPrescription/:bookingId/:patientAadhar"
               element={<PrescriptionForm />}
-            />
+            /> */}
+            <Route
+  path="appointments/addPrescription/:bookingId/:patientAadhar?"
+  element={<PrescriptionForm />}
+/>
             <Route path="time-slots" element={<TimeSlots />} />
             <Route path="patients" element={<AllPatient />} />
             <Route path="patientEMR/:aadhar" element={<PatientEMR />} />
