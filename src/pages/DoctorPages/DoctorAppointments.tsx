@@ -157,9 +157,11 @@ const OnlineBookingCard = ({
 const OfflineBookingCard = ({
   b,
   onComplete,
+  onPrescription,
 }: {
   b: OfflineBooking;
   onComplete: (id: string) => void;
+  onPrescription: (b: OfflineBooking) => void;
 }) => {
   const formattedDate = new Date(b.date).toLocaleDateString("en-IN", {
     day: "2-digit", month: "long", year: "numeric",
@@ -212,6 +214,12 @@ const OfflineBookingCard = ({
             <CheckIcon className="w-4 h-4" />
             Complete Appointment
           </button>
+          <button
+            onClick={() => onPrescription(b)}
+            className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg text-sm font-medium transition"
+          >
+            Give Prescription
+          </button>
         </div>
       )}
     </div>
@@ -233,7 +241,7 @@ function SectionGroup<T,>({
   return (
     <div className="mb-8">
       <h3 className="text-2xl font-bold text-gray-700 mb-4">{title}</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 w-full max-w-screen-xl">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 w-full max-w-7xl">
         {list.map((item) => renderCard(item))}
       </div>
     </div>
@@ -507,6 +515,12 @@ export default function DoctorAppointments() {
                     key={b._id}
                     b={b}
                     onComplete={completeOffline}
+                    onPrescription={(b) =>
+                      navigate(
+                        `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
+                        { state: { name: b.patient?.name, gender: b.patient?.gender } }
+                      )
+                    }
                   />
                 )}
               />
@@ -518,6 +532,12 @@ export default function DoctorAppointments() {
                     key={b._id}
                     b={b}
                     onComplete={completeOffline}
+                    onPrescription={(b) =>
+                      navigate(
+                        `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
+                        { state: { name: b.patient?.name, gender: b.patient?.gender } }
+                      )
+                    }
                   />
                 )}
               />
@@ -529,6 +549,12 @@ export default function DoctorAppointments() {
                     key={b._id}
                     b={b}
                     onComplete={completeOffline}
+                    onPrescription={(b) =>
+                      navigate(
+                        `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
+                        { state: { name: b.patient?.name, gender: b.patient?.gender } }
+                      )
+                    }
                   />
                 )}
               />

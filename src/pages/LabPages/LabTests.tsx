@@ -421,7 +421,7 @@ const [deleteLoading, setDeleteLoading] = useState(false);
               </div>
               Test & Package Management
             </h1>
-            <p className="text-sm text-gray-500 mt-1 ml-[52px]">
+            <p className="text-sm text-gray-500 mt-1 ml-13">
               Manage your lab tests and create custom packages
             </p>
           </div>
