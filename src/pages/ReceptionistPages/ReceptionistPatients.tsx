@@ -15,6 +15,7 @@ interface Patient {
   fees: number;
   status: string;
   date: Date;
+  paid: boolean;
 }
 
 interface EditModalProps {
@@ -27,7 +28,7 @@ function EditModal({ patient, onClose, onSave }: EditModalProps) {
   const [form, setForm] = useState<Patient>({ ...patient });
   const [saving, setSaving] = useState(false);
 
-  const handleChange = (field: keyof Patient, value: string | number) => {
+  const handleChange = (field: keyof Patient, value: string | number |boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -38,7 +39,7 @@ function EditModal({ patient, onClose, onSave }: EditModalProps) {
       await api.put(
         `/api/receptionist/clinic-patients/${patient.bookingId}`,
         form,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       onSave(form);
       onClose();
@@ -53,7 +54,9 @@ function EditModal({ patient, onClose, onSave }: EditModalProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-5">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Edit Patient Details</h2>
+          <h2 className="text-lg font-semibold text-gray-900">
+            Edit Patient Details
+          </h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
@@ -65,7 +68,9 @@ function EditModal({ patient, onClose, onSave }: EditModalProps) {
 
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Patient Name</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Patient Name
+            </label>
             <input
               type="text"
               value={form.patient}
@@ -75,7 +80,9 @@ function EditModal({ patient, onClose, onSave }: EditModalProps) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Mobile Number</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Mobile Number
+            </label>
             <input
               type="tel"
               value={form.mobileNumber}
@@ -85,7 +92,9 @@ function EditModal({ patient, onClose, onSave }: EditModalProps) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Fees (₹)</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Fees (₹)
+            </label>
             <input
               type="number"
               value={form.fees}
@@ -93,9 +102,19 @@ function EditModal({ patient, onClose, onSave }: EditModalProps) {
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+          <div className="flex items-center gap-2">
+  <input
+    type="checkbox"
+    checked={form.paid}
+    onChange={(e) => handleChange("paid", e.target.checked)}
+  />
+  <label className="text-sm text-gray-700">Paid</label>
+</div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Status
+            </label>
             <select
               value={form.status}
               onChange={(e) => handleChange("status", e.target.value)}
@@ -142,7 +161,7 @@ export default function Patients() {
       const res = await api.get("/api/receptionist/clinic-patients", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log(res)
+      console.log(res);
       setPatients(res.data.patients);
       setTotalPatients(res.data.totalPatients);
     } catch {
@@ -158,7 +177,7 @@ export default function Patients() {
 
   const handleSave = (updated: Patient) => {
     setPatients((prev) =>
-      prev.map((p) => (p.bookingId === updated.bookingId ? updated : p))
+      prev.map((p) => (p.bookingId === updated.bookingId ? updated : p)),
     );
   };
 
@@ -192,8 +211,12 @@ export default function Patients() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
-          <h1 className="text-xl md:text-2xl font-semibold text-gray-900">Patients</h1>
-          <p className="text-sm text-gray-500 mt-1">All patients across your clinic bookings</p>
+          <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
+            Patients
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            All patients across your clinic bookings
+          </p>
           <p className="text-sm text-gray-500 font-bold tracking-tight">
             Total Patients: {totalPatients}
           </p>
@@ -226,7 +249,9 @@ export default function Patients() {
 
       {/* Table Card */}
       <div className="bg-white border border-gray-200 rounded-xl p-5">
-        {loading && <p className="text-sm text-gray-500">Loading patients...</p>}
+        {loading && (
+          <p className="text-sm text-gray-500">Loading patients...</p>
+        )}
         {error && <p className="text-sm text-red-500">{error}</p>}
         {!loading && patients.length === 0 && (
           <p className="text-sm text-gray-500">No patients found.</p>
@@ -248,6 +273,7 @@ export default function Patients() {
                     <th className="text-left">Doctor</th>
                     <th className="text-left">Mode / Booked by</th>
                     <th className="text-left">Fees</th>
+                    <th className="text-left">Paid</th>
                     <th className="text-left">Status</th>
                     <th className="text-left">Date</th>
                     <th className="text-left">Action</th>
@@ -259,7 +285,9 @@ export default function Patients() {
                       key={item.bookingId}
                       className="border-b hover:bg-gray-50 transition"
                     >
-                      <td className="py-3 font-medium text-gray-900">{item.patient}</td>
+                      <td className="py-3 font-medium text-gray-900">
+                        {item.patient}
+                      </td>
 
                       <td className="text-gray-700">
                         {item.mobileNumber ? (
@@ -276,7 +304,9 @@ export default function Patients() {
 
                       <td>
                         {item.doctor?.fullName || "—"}
-                        <p className="text-xs text-gray-500">{item.doctor?.specialization}</p>
+                        <p className="text-xs text-gray-500">
+                          {item.doctor?.specialization}
+                        </p>
                       </td>
 
                       <td>
@@ -286,6 +316,17 @@ export default function Patients() {
                       </td>
 
                       <td>₹{item.fees}</td>
+                      <td>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            item.paid
+                              ? "bg-green-100 text-green-700"
+                              : "bg-red-100 text-red-700"
+                          }`}
+                        >
+                          {item.paid ? "Paid" : "Unpaid"}
+                        </span>
+                      </td>
 
                       <td>
                         <span
@@ -293,8 +334,8 @@ export default function Patients() {
                             item.status === "pending"
                               ? "bg-yellow-100 text-yellow-700"
                               : item.status === "completed"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-gray-100 text-gray-600"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-gray-100 text-gray-600"
                           }`}
                         >
                           {item.status}
@@ -345,7 +386,9 @@ export default function Patients() {
                   {/* Top row: name + status */}
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className="font-semibold text-gray-900">{item.patient}</p>
+                      <p className="font-semibold text-gray-900">
+                        {item.patient}
+                      </p>
                       {item.mobileNumber ? (
                         <a
                           href={`tel:${item.mobileNumber}`}
@@ -362,8 +405,8 @@ export default function Patients() {
                         item.status === "pending"
                           ? "bg-yellow-100 text-yellow-700"
                           : item.status === "completed"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-gray-100 text-gray-600"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-100 text-gray-600"
                       }`}
                     >
                       {item.status}
@@ -372,28 +415,46 @@ export default function Patients() {
 
                   {/* Doctor */}
                   <div className="text-sm text-gray-700">
-                    <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Doctor</span>
+                    <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+                      Doctor
+                    </span>
                     <p>{item.doctor?.fullName || "—"}</p>
                     {item.doctor?.specialization && (
-                      <p className="text-xs text-gray-500">{item.doctor.specialization}</p>
+                      <p className="text-xs text-gray-500">
+                        {item.doctor.specialization}
+                      </p>
                     )}
                   </div>
 
                   {/* Mode, Fees, Date */}
                   <div className="grid grid-cols-3 gap-2 text-sm">
                     <div>
-                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Mode</p>
+                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+                        Mode
+                      </p>
                       <p className="capitalize text-gray-700">
                         {item.mode ? item.mode : item.bookedBy || "—"}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Fees</p>
+                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+                        Fees
+                      </p>
                       <p className="text-gray-700">₹{item.fees}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Date</p>
-                      <p className="text-gray-700">{new Date(item.date).toLocaleDateString()}</p>
+  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Paid</p>
+  <p className={item.paid ? "text-green-600" : "text-red-600"}>
+    {item.paid ? "Paid" : "Unpaid"}
+  </p>
+</div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+                        Date
+                      </p>
+                      <p className="text-gray-700">
+                        {new Date(item.date).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
 

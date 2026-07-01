@@ -20,6 +20,7 @@ import DoctorProfile from './pages/DoctorPages/DoctorProfile';
 import DoctorNotifications from './pages/DoctorPages/DoctorNotifications';
 import AddMedicine from './pages/DoctorPages/AddMedicine';
 import AllPatient from './pages/DoctorPages/AllPatient';
+import OfflinePatientDetails from './pages/DoctorPages/OfflinePatientDetails';
 import TimeSlots from './pages/TimeSlots';
 import EditDoctorProfile from './pages/EditDoctorProfile';
 import PatientEMR from './pages/PatientEMR';
@@ -81,6 +82,7 @@ function App() {
 />
             <Route path="time-slots" element={<TimeSlots />} />
             <Route path="patients" element={<AllPatient />} />
+            <Route path="offline-patient/:userId" element={<OfflinePatientDetails />} />
             <Route path="patientEMR/:aadhar" element={<PatientEMR />} />
             <Route
               path="editDoctorIdPassword"

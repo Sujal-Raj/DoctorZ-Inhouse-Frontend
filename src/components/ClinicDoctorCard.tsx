@@ -1,6 +1,6 @@
 
 
-import React from "react";
+import React, { useState } from "react";
 import { MapPin} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 // import { AuthContext } from "../../Context/AuthContext";
@@ -43,39 +43,39 @@ const ClinicDoctorCard: React.FC<Props> = ({ doctor , doctorStatus , onRequestSe
 
   
   const navigate = useNavigate();
- 
+ const [loading, setLoading] = useState(false);
   // Get patient ID
   // const token = Cookies.get("patientToken");
   // const patientId = token ? (jwtDecode<DecodedToken>(token)?.id ?? null) : null;
 
 const handleAddDoctor = async (doctor :Doctor)=>{
-  try{
-      await api.post("/api/clinic/send-doctor-request",{
-        
-          doctorId :doctor._id,
-          clinicId :localStorage.getItem("clinicId"),
-        
+  if(loading) return;
+  try {
+      setLoading(true);
+
+      await api.post("/api/clinic/send-doctor-request", {
+        doctorId: doctor._id,
+        clinicId: localStorage.getItem("clinicId"),
       });
-      
 
-//     const data = res.data as { message: string };
+      Swal.fire({
+        title: "Request Sent!",
+        text: "Your request has been sent successfully.",
+        icon: "success",
+        confirmButtonText: "Ok",
+      });
 
-// alert(data.message);
-
-Swal.fire({
-  title: "Request Sent!",
-  text: "Your request has been sent successfully.",
-  icon: "success",
-  confirmButtonText: "Ok",
-});
-
-
-  onRequestSent(doctor._id);
-      
-  }
-  catch(error){
-    console.log(error);
-  }
+      onRequestSent(doctor._id);
+    } catch (error) {
+      console.log(error);
+      Swal.fire({
+        title: "Error",
+        text: "Could not send request.",
+        icon: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
 }
   
 
@@ -167,9 +167,13 @@ Swal.fire({
         e.stopPropagation();
         handleAddDoctor(doctor);
       }}
-      className="px-4 py-2 bg-[#0c213e] text-white rounded-lg w-full"
+      className={`px-4 py-2 rounded-lg w-full text-white ${
+              loading
+                ? "bg-gray-500 cursor-not-allowed"
+                : "bg-[#0c213e] hover:bg-[#08162a] cursor-pointer"
+            }`}
     >
-      Add Doctor
+       {loading ? "Loading..." : "Add Doctor"}
     </button>
   )}
 

@@ -654,7 +654,8 @@ const AllPatient: React.FC = () => {
                             <button
                               onClick={() =>
                                 navigate(
-                                  `/doctordashboard/${drId}/offline-patient/${booking.userId._id}`
+                                  `/doctordashboard/${drId}/offline-patient/${booking.userId._id}`,
+                                  { state: { booking } }
                                 )
                               }
                               className="px-3 py-1.5 text-white rounded-lg text-xs font-medium hover:opacity-90 transition-opacity"
