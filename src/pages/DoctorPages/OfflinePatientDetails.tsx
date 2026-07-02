@@ -214,7 +214,7 @@ const OfflinePatientDetails: React.FC = () => {
         </button>
 
         {loading ? (
-          <div className="flex min-h-[24rem] items-center justify-center rounded-3xl border border-gray-200 bg-white shadow-sm">
+          <div className="flex min-h-96 items-center justify-center rounded-3xl border border-gray-200 bg-white shadow-sm">
             <div className="flex items-center gap-3 text-gray-500">
               <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
