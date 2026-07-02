@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { FlaskConical, Users, UserCircle, LogOut, Menu, X } from "lucide-react";
+import { FlaskConical, Users, UserCircle, LogOut, Menu, X, Archive, Receipt } from "lucide-react";
 import { useState, useEffect } from "react";
 
 export default function LabDashboard() {
@@ -33,6 +33,8 @@ export default function LabDashboard() {
   const menuItems = [
     { name: "Patients", path: "patients", icon: Users },
     { name: "Lab Tests", path: "tests", icon: FlaskConical },
+    { name: "Inventory", path: "inventory", icon: Archive },
+    { name: "Expenses", path: "expenses", icon: Receipt },
     { name: "Profile", path: "profile", icon: UserCircle },
   ];
 

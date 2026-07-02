@@ -262,8 +262,13 @@ const PrescriptionForm: React.FC = () => {
       await api.post(`/api/prescription/addPrescription/${bookingId}`, payload);
       Swal.fire({ title: "Prescription Saved!", icon: "success" });
       setDiagnosisInput(""); setSymptoms([]); setTests([]); setMedicines([]); setNotes("");
-    } catch {
-      Swal.fire({ title: "Error Saving Prescription", icon: "error" });
+    } catch (err: any) {
+      console.error("Prescription saving failed:", err);
+      Swal.fire({
+        title: "Error Saving Prescription",
+        text: err.response?.data?.message || err.message || "Something went wrong",
+        icon: "error"
+      });
     } finally {
       setLoading(false);
     }

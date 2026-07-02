@@ -11,8 +11,10 @@ import {
   ChevronsLeft,
   ChevronsRight,
   X,
+  Plus,
 } from "lucide-react";
 import api from "../../Services/mainApi";
+import toast, { Toaster } from "react-hot-toast";
 
 interface PatientBooking {
   _id: string;
@@ -29,6 +31,8 @@ interface PatientBooking {
   bookingDate: string | null;
   status: string;
   bookedAt: string | Date;
+  bookingType?: "test" | "package";
+  reportUrl?: string;
 }
 
 interface LabDashboardContext {
@@ -78,6 +82,35 @@ const Patients: React.FC = memo(() => {
   const pageSize = 10;
   const [page, setPage] = useState(1);
 
+  // New Booking States
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [bookingType, setBookingType] = useState<"test" | "package">("test");
+  const [availableTests, setAvailableTests] = useState<any[]>([]);
+  const [availablePackages, setAvailablePackages] = useState<any[]>([]);
+  const [selectedTestId, setSelectedTestId] = useState("");
+  const [selectedPackageId, setSelectedPackageId] = useState("");
+  const [bookingDate, setBookingDate] = useState(new Date().toISOString().split("T")[0]);
+  const [bookingSaving, setBookingSaving] = useState(false);
+  const [patientForm, setPatientForm] = useState({
+    fullName: "",
+    gender: "Male" as "Male" | "Female" | "Other",
+    dob: "",
+    mobileNumber: "",
+    aadhar: "",
+  });
+
+  // Report Upload States
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadTarget, setUploadTarget] = useState<PatientBooking | null>(null);
+  const [reportFile, setReportFile] = useState<File | null>(null);
+  const [uploadSaving, setUploadSaving] = useState(false);
+
+  const openUploadModal = (booking: PatientBooking) => {
+    setUploadTarget(booking);
+    setReportFile(null);
+    setShowUploadModal(true);
+  };
+
   // Debounce search
   useEffect(() => {
     const timeout = setTimeout(
@@ -87,35 +120,161 @@ const Patients: React.FC = memo(() => {
     return () => clearTimeout(timeout);
   }, [searchTerm]);
 
-  useEffect(() => {
+  const fetchPatients = async () => {
     if (!labId) {
       setLoading(false);
       return;
     }
+    try {
+      const res = await api.get<{ labPatients: PatientBooking[] }>(
+        `/api/lab/getLabPatients/${labId}`
+      );
+      setPatients(res.data.labPatients || []);
+    } catch (err) {
+      console.error("Failed to fetch lab patients", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    let active = true;
-
-    (async () => {
-      try {
-        const res = await api.get<{ labPatients: PatientBooking[] }>(
-          `/api/lab/getLabPatients/${labId}`
-        );
-        if (active) {
-          // if your backend field name is different (e.g. res.data.labPatients),
-          // adjust this accordingly:
-          setPatients(res.data.labPatients || []);
-        }
-      } catch (err) {
-        console.error("Failed to fetch lab patients", err);
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
+  useEffect(() => {
+    fetchPatients();
   }, [labId]);
+
+  // Fetch tests and packages for lab booking
+  useEffect(() => {
+    if (!labId) return;
+    const fetchTestsAndPackages = async () => {
+      try {
+        const testRes = await api.get(`/api/lab/getAllTestByLabId/${labId}`);
+        setAvailableTests(testRes.data.tests || []);
+      } catch (err) {
+        console.error("Failed to load tests", err);
+      }
+      try {
+        const pkgRes = await api.get(`/api/lab/getAllPackagesByLabId/${labId}`);
+        setAvailablePackages(pkgRes.data.packages || []);
+      } catch (err) {
+        console.error("Failed to load packages", err);
+      }
+    };
+    fetchTestsAndPackages();
+  }, [labId]);
+
+  const handleBook = async () => {
+    if (bookingType === "test" && !selectedTestId) {
+      toast.error("Please select a test");
+      return;
+    }
+    if (bookingType === "package" && !selectedPackageId) {
+      toast.error("Please select a package");
+      return;
+    }
+    if (!patientForm.fullName || !patientForm.gender || !patientForm.dob || !patientForm.mobileNumber || !bookingDate) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    try {
+      setBookingSaving(true);
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+
+      if (bookingType === "test") {
+        await api.post(
+          "/api/lab/labBookTest",
+          {
+            testId: selectedTestId,
+            fullName: patientForm.fullName,
+            gender: patientForm.gender,
+            dob: patientForm.dob,
+            mobileNumber: Number(patientForm.mobileNumber),
+            aadhar: patientForm.aadhar || undefined,
+            bookingDate,
+          },
+          { headers }
+        );
+      } else {
+        await api.post(
+          "/api/lab/labBookPackage",
+          {
+            packageId: selectedPackageId,
+            fullName: patientForm.fullName,
+            gender: patientForm.gender,
+            dob: patientForm.dob,
+            mobileNumber: Number(patientForm.mobileNumber),
+            aadhar: patientForm.aadhar || undefined,
+            bookingDate,
+          },
+          { headers }
+        );
+      }
+
+      toast.success("Booking placed successfully!");
+      setShowBookingModal(false);
+
+      // Reset form
+      setPatientForm({
+        fullName: "",
+        gender: "Male",
+        dob: "",
+        mobileNumber: "",
+        aadhar: "",
+      });
+      setSelectedTestId("");
+      setSelectedPackageId("");
+      setBookingDate(new Date().toISOString().split("T")[0]);
+
+      // Refresh list
+      fetchPatients();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Failed to make booking");
+    } finally {
+      setBookingSaving(false);
+    }
+  };
+
+  const handleUploadSubmit = async () => {
+    if (!uploadTarget) return;
+    if (!reportFile) {
+      toast.error("Please select a file to upload");
+      return;
+    }
+
+    try {
+      setUploadSaving(true);
+      const token = localStorage.getItem("token");
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      };
+
+      const formData = new FormData();
+      formData.append("report", reportFile);
+
+      // Determine correct endpoint based on bookingType
+      const isPackage = uploadTarget.bookingType === "package";
+      const url = isPackage
+        ? `/api/lab/completePackage/${uploadTarget._id}`
+        : `/api/lab/completeTest/${uploadTarget._id}`;
+
+      await api.put(url, formData, { headers });
+
+      toast.success("Report uploaded and test marked completed!");
+      setShowUploadModal(false);
+      setUploadTarget(null);
+      setReportFile(null);
+
+      // Refresh list
+      fetchPatients();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Failed to upload report");
+    } finally {
+      setUploadSaving(false);
+    }
+  };
 
   // Filter patients
   const filtered = useMemo(() => {
@@ -198,6 +357,13 @@ const Patients: React.FC = memo(() => {
               View and manage all patient appointments
             </p>
           </div>
+          <button
+            onClick={() => setShowBookingModal(true)}
+            className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#0c213e] text-white rounded-xl font-semibold shadow-sm hover:bg-[#1a3a5f] active:scale-95 transition-all duration-200 text-sm cursor-pointer"
+          >
+            <Plus className="w-5 h-5" />
+            Book Test/Package
+          </button>
         </div>
       </div>
 
@@ -366,12 +532,15 @@ const Patients: React.FC = memo(() => {
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Status
                 </th>
+                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {pageItems.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center">
+                  <td colSpan={6} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
                         <Users className="w-6 h-6 text-gray-400" />
@@ -416,9 +585,14 @@ const Patients: React.FC = memo(() => {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-blue-50 text-blue-700 text-sm font-medium">
+                        <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg text-sm font-medium ${p.bookingType === "package" ? "bg-amber-50 text-amber-700" : "bg-blue-50 text-blue-700"}`}>
                           <TestTube className="w-4 h-4" />
                           {p.testName || "—"}
+                          {p.bookingType && (
+                            <span className="text-[10px] font-bold uppercase ml-1 opacity-70">
+                              ({p.bookingType})
+                            </span>
+                          )}
                         </span>
                       </td>
                       <td className="px-6 py-4">
@@ -440,6 +614,31 @@ const Patients: React.FC = memo(() => {
                         >
                           {p.status}
                         </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        {p.status === "completed" ? (
+                          p.reportUrl ? (
+                            <a
+                              href={p.reportUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+                            >
+                              View Report
+                            </a>
+                          ) : (
+                            <span className="text-gray-400 text-xs italic">No report uploaded</span>
+                          )
+                        ) : p.status === "cancelled" ? (
+                          <span className="text-gray-400 text-xs italic">Cancelled</span>
+                        ) : (
+                          <button
+                            onClick={() => openUploadModal(p)}
+                            className="px-3 py-1.5 text-xs font-semibold text-white bg-[#0c213e] hover:bg-[#1a3a5f] rounded-lg transition-colors cursor-pointer"
+                          >
+                            Upload Report
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -509,6 +708,260 @@ const Patients: React.FC = memo(() => {
           </div>
         )}
       </div>
+
+      {showBookingModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl max-h-[90vh] overflow-y-auto transform transition-all duration-300">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <h2 className="text-xl font-bold text-gray-900">
+                Book Test / Package
+              </h2>
+              <button onClick={() => setShowBookingModal(false)} className="text-gray-500 hover:bg-gray-100 p-1.5 rounded-lg cursor-pointer">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBookingType("test");
+                    setSelectedPackageId("");
+                  }}
+                  className={`py-3 rounded-xl border-2 font-semibold transition-all cursor-pointer ${
+                    bookingType === "test"
+                      ? "border-[#0c213e] bg-blue-50/50 text-[#0c213e]"
+                      : "border-gray-200 text-gray-500 hover:bg-gray-50"
+                  }`}
+                >
+                  Book individual Test
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBookingType("package");
+                    setSelectedTestId("");
+                  }}
+                  className={`py-3 rounded-xl border-2 font-semibold transition-all cursor-pointer ${
+                    bookingType === "package"
+                      ? "border-[#0c213e] bg-blue-50/50 text-[#0c213e]"
+                      : "border-gray-200 text-gray-500 hover:bg-gray-50"
+                  }`}
+                >
+                  Book Lab Package
+                </button>
+              </div>
+
+              {bookingType === "test" ? (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    Select Test*
+                  </label>
+                  <select
+                    value={selectedTestId}
+                    onChange={(e) => setSelectedTestId(e.target.value)}
+                    className="w-full rounded-xl border-2 border-gray-200 p-3 text-sm focus:border-[#0c213e] focus:ring-2 focus:ring-blue-100 outline-none bg-white"
+                  >
+                    <option value="">-- Choose a Test --</option>
+                    {availableTests.map((t) => (
+                      <option key={t._id} value={t._id}>
+                        {t.testName} (₹{t.price})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    Select Package*
+                  </label>
+                  <select
+                    value={selectedPackageId}
+                    onChange={(e) => setSelectedPackageId(e.target.value)}
+                    className="w-full rounded-xl border-2 border-gray-200 p-3 text-sm focus:border-[#0c213e] focus:ring-2 focus:ring-blue-100 outline-none bg-white"
+                  >
+                    <option value="">-- Choose a Package --</option>
+                    {availablePackages.map((p) => (
+                      <option key={p._id} value={p._id}>
+                        {p.packageName} (₹{p.totalPrice})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="border-t border-gray-100 pt-4 space-y-4">
+                <h3 className="font-bold text-gray-900 text-base">Patient Information</h3>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    Full Name*
+                  </label>
+                  <input
+                    type="text"
+                    value={patientForm.fullName}
+                    onChange={(e) => setPatientForm({ ...patientForm, fullName: e.target.value })}
+                    className="w-full rounded-xl border-2 border-gray-200 p-3 text-sm focus:border-[#0c213e] focus:ring-2 focus:ring-blue-100 outline-none"
+                    placeholder="John Doe"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      Gender*
+                    </label>
+                    <select
+                      value={patientForm.gender}
+                      onChange={(e) => setPatientForm({ ...patientForm, gender: e.target.value as any })}
+                      className="w-full rounded-xl border-2 border-gray-200 p-3 text-sm focus:border-[#0c213e] focus:ring-2 focus:ring-blue-100 outline-none bg-white"
+                    >
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      Date of Birth*
+                    </label>
+                    <input
+                      type="date"
+                      value={patientForm.dob}
+                      onChange={(e) => setPatientForm({ ...patientForm, dob: e.target.value })}
+                      className="w-full rounded-xl border-2 border-gray-200 p-3 text-sm focus:border-[#0c213e] focus:ring-2 focus:ring-blue-100 outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      Mobile Number*
+                    </label>
+                    <input
+                      type="number"
+                      value={patientForm.mobileNumber}
+                      onChange={(e) => setPatientForm({ ...patientForm, mobileNumber: e.target.value })}
+                      className="w-full rounded-xl border-2 border-gray-200 p-3 text-sm focus:border-[#0c213e] focus:ring-2 focus:ring-blue-100 outline-none"
+                      placeholder="e.g. 9876543210"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      Aadhar Card Number (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={patientForm.aadhar}
+                      onChange={(e) => setPatientForm({ ...patientForm, aadhar: e.target.value })}
+                      className="w-full rounded-xl border-2 border-gray-200 p-3 text-sm focus:border-[#0c213e] focus:ring-2 focus:ring-blue-100 outline-none"
+                      placeholder="12 digit number"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    Booking Date*
+                  </label>
+                  <input
+                    type="date"
+                    value={bookingDate}
+                    onChange={(e) => setBookingDate(e.target.value)}
+                    className="w-full rounded-xl border-2 border-gray-200 p-3 text-sm focus:border-[#0c213e] focus:ring-2 focus:ring-blue-100 outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-100 flex justify-end gap-3 bg-gray-50/50">
+              <button
+                onClick={() => setShowBookingModal(false)}
+                className="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border-2 border-gray-200 rounded-xl hover:bg-gray-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBook}
+                disabled={bookingSaving}
+                className="px-5 py-2 text-sm font-semibold text-white bg-[#0c213e] rounded-xl hover:bg-[#1a3a5f] disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer"
+              >
+                {bookingSaving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                Book Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showUploadModal && uploadTarget && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 transform transition-all duration-300">
+            <div className="flex justify-between items-center pb-4 border-b border-gray-100">
+              <h3 className="text-lg font-bold text-gray-900">Upload Test Report</h3>
+              <button
+                onClick={() => {
+                  setShowUploadModal(false);
+                  setUploadTarget(null);
+                }}
+                className="text-gray-500 hover:bg-gray-100 p-1 rounded-lg cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="mt-4 space-y-4">
+              <div>
+                <p className="text-sm text-gray-500">Patient:</p>
+                <p className="font-semibold text-gray-800">{safeFullName(uploadTarget.userId)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Test/Package:</p>
+                <p className="font-semibold text-gray-800">{uploadTarget.testName}</p>
+              </div>
+              
+              <div className="pt-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Select Report File (PDF/Image)*
+                </label>
+                <input
+                  type="file"
+                  accept="application/pdf,image/*"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      setReportFile(e.target.files[0]);
+                    }
+                  }}
+                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+                />
+              </div>
+            </div>
+            
+            <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-gray-100 bg-gray-50/50 -mx-6 -mb-6 p-6 rounded-b-2xl">
+              <button
+                onClick={() => {
+                  setShowUploadModal(false);
+                  setUploadTarget(null);
+                }}
+                className="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border-2 border-gray-200 rounded-xl hover:bg-gray-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUploadSubmit}
+                disabled={uploadSaving}
+                className="px-5 py-2 text-sm font-semibold text-white bg-[#0c213e] rounded-xl hover:bg-[#1a3a5f] disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer"
+              >
+                {uploadSaving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                Submit & Complete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <Toaster position="top-right" />
     </div>
   );
 });

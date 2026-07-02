@@ -28,6 +28,8 @@ import LabDashboard from './pages/LabPages/LabDashboard';
 import Patients from './pages/LabPages/LabPatients';
 import LabProfile from './pages/LabPages/LabProfile';
 import LabTests from "./pages/LabPages/LabTests";
+import LabInventory from './pages/LabPages/LabInventory';
+import LabExpenses from './pages/LabPages/LabExpenses';
 import { ClinicDashboard } from './pages/ClinicPages/ClinicDashboard';
 import ClinicHomeDashboard from './pages/ClinicPages/ClinicHomeDashboard';
 import ClinicProfile from './pages/ClinicPages/ClinicProfile';
@@ -104,6 +106,8 @@ function App() {
             <Route path="patients" element={<Patients />} />
             <Route path="tests" element={<LabTests />} />
             <Route path="profile" element={<LabProfile />} />
+            <Route path="inventory" element={<LabInventory />} />
+            <Route path="expenses" element={<LabExpenses />} />
           </Route>
 
           <Route
