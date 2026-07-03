@@ -9,7 +9,7 @@ import {
   Menu,
   X,
   Building2,
-  // UserPlus,
+  IndianRupee,
 } from "lucide-react";
 
 interface Props {
@@ -46,6 +46,7 @@ export default function Sidebar({ activeTab, setActiveTab }: Props) {
     { id: "bookToken", label: "Book Token", icon: <Calendar  size={18} /> },
     { id: "doctors", label: "Doctors", icon: <Users size={18} /> },
     { id: "patients", label: "Patients", icon: <Calendar  size={18} /> },
+    { id: "collections", label: "Collections", icon: <IndianRupee size={18} /> },
     { id: "profile", label: "Profile", icon: <User size={18} /> },
   ];
 

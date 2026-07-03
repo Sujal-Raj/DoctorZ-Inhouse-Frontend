@@ -16,6 +16,7 @@ import {
   ArrowRightOnRectangleIcon,
   Bars3Icon,
   PlusIcon,
+  BanknotesIcon,
 } from "@heroicons/react/24/outline";
 
 import {
@@ -26,6 +27,7 @@ import {
   UsersIcon as UsersIconSolid,
   BellIcon as BellIconSolid,
   PlusIcon as PlusIconSolid,
+  BanknotesIcon as BanknotesIconSolid,
 } from "@heroicons/react/24/solid";
 import api from "../../Services/mainApi";
 
@@ -119,6 +121,12 @@ export default function DoctorDashboard() {
       icon: BellIcon,
       iconSolid: BellIconSolid,
       badge: newNotifCount,
+    },
+    {
+      name: "Earnings",
+      path: "earnings",
+      icon: BanknotesIcon,
+      iconSolid: BanknotesIconSolid,
     },
     {
       name: "Profile",

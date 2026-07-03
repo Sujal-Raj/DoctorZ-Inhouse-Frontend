@@ -12,6 +12,8 @@ import {
   ChevronsRight,
   X,
   Plus,
+  IndianRupee,
+  Archive,
 } from "lucide-react";
 import api from "../../Services/mainApi";
 import toast, { Toaster } from "react-hot-toast";
@@ -33,6 +35,15 @@ interface PatientBooking {
   bookedAt: string | Date;
   bookingType?: "test" | "package";
   reportUrl?: string;
+  price?: number;
+  packageId?: {
+    _id: string;
+    packageName: string;
+    totalPrice?: number;
+  };
+  paymentStatus?: "paid" | "unpaid" | "pending";
+  paymentMethod?: string;
+  transactionId?: string;
 }
 
 interface LabDashboardContext {
@@ -73,6 +84,7 @@ const Patients: React.FC = memo(() => {
   const { labId } = useOutletContext<LabDashboardContext>();
   const [patients, setPatients] = useState<PatientBooking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [workflowTab, setWorkflowTab] = useState<"worklist" | "billing" | "archives">("worklist");
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
   const [dateFrom, setDateFrom] = useState("");
@@ -104,6 +116,49 @@ const Patients: React.FC = memo(() => {
   const [uploadTarget, setUploadTarget] = useState<PatientBooking | null>(null);
   const [reportFile, setReportFile] = useState<File | null>(null);
   const [uploadSaving, setUploadSaving] = useState(false);
+
+  // Payment Collection States
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedBookingForPayment, setSelectedBookingForPayment] = useState<PatientBooking | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [transactionId, setTransactionId] = useState("");
+  const [paymentSaving, setPaymentSaving] = useState(false);
+
+  const handleOpenPaymentModal = (booking: PatientBooking) => {
+    setSelectedBookingForPayment(booking);
+    setPaymentMethod("cash");
+    setTransactionId("");
+    setShowPaymentModal(true);
+  };
+
+  const handleCollectPaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedBookingForPayment) return;
+    setPaymentSaving(true);
+    try {
+      const type = selectedBookingForPayment.bookingType === "package" ? "labPackage" : "labTest";
+      const payload = {
+        paymentStatus: "paid",
+        paymentMethod,
+        transactionId: transactionId.trim() || undefined
+      };
+      const token = localStorage.getItem("token");
+      const res = await api.put(`/api/revenue/payment/${type}/${selectedBookingForPayment._id}`, payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success) {
+        toast.success("Payment collected successfully!");
+        setShowPaymentModal(false);
+        setSelectedBookingForPayment(null);
+        fetchPatients();
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Failed to update payment status");
+    } finally {
+      setPaymentSaving(false);
+    }
+  };
 
   const openUploadModal = (booking: PatientBooking) => {
     setUploadTarget(booking);
@@ -276,27 +331,67 @@ const Patients: React.FC = memo(() => {
     }
   };
 
+  const tabCounts = useMemo(() => {
+    let worklist = 0;
+    let billing = 0;
+    let archives = 0;
+
+    patients.forEach((p) => {
+      const statusLower = p.status?.toLowerCase();
+      if (statusLower !== "completed" || !p.reportUrl) {
+        worklist++;
+      }
+      if (p.paymentStatus !== "paid") {
+        billing++;
+      }
+      if (statusLower === "completed" && p.paymentStatus === "paid") {
+        archives++;
+      }
+    });
+
+    return { worklist, billing, archives };
+  }, [patients]);
+
   // Filter patients
   const filtered = useMemo(() => {
     const s = debouncedSearch.toLowerCase();
     return patients.filter((p) => {
+      const statusLower = p.status?.toLowerCase();
+      // 1. Filter by workflow tab
+      if (workflowTab === "worklist") {
+        const isWork = statusLower !== "completed" || !p.reportUrl;
+        if (!isWork) return false;
+      } else if (workflowTab === "billing") {
+        const isBill = p.paymentStatus !== "paid";
+        if (!isBill) return false;
+      } else if (workflowTab === "archives") {
+        const isArch = statusLower === "completed" && p.paymentStatus === "paid";
+        if (!isArch) return false;
+      }
+
+      // 2. Filter by date range
       if (dateFrom || dateTo) {
         if (!p.bookingDate) return false;
         const d = new Date(p.bookingDate);
         if (dateFrom && d < new Date(dateFrom + "T00:00:00")) return false;
         if (dateTo && d > new Date(dateTo + "T23:59:59")) return false;
       }
-      if (statusFilter && p.status !== statusFilter) return false;
+
+      // 3. Filter by status (only for worklist tab)
+      if (workflowTab === "worklist" && statusFilter && statusLower !== statusFilter.toLowerCase()) return false;
+
+      // 4. Search term
       if (!s) return true;
       const name = safeFullName(p.userId).toLowerCase();
       const test = (p.testName || "").toLowerCase();
       return name.includes(s) || test.includes(s);
     });
-  }, [patients, debouncedSearch, dateFrom, dateTo, statusFilter]);
+  }, [patients, workflowTab, debouncedSearch, dateFrom, dateTo, statusFilter]);
 
   const statusCounts = useMemo(() => {
     return patients.reduce((acc, p) => {
-      acc[p.status] = (acc[p.status] || 0) + 1;
+      const s = p.status?.toLowerCase() || "pending";
+      acc[s] = (acc[s] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
   }, [patients]);
@@ -312,14 +407,14 @@ const Patients: React.FC = memo(() => {
   }, [filtered, page, pageSize]);
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Completed":
+    switch (status?.toLowerCase()) {
+      case "completed":
         return "bg-green-100 text-green-700 border-green-200";
-      case "Pending":
+      case "pending":
         return "bg-yellow-100 text-yellow-700 border-yellow-200";
-      case "In Progress":
+      case "in progress":
         return "bg-blue-100 text-blue-700 border-blue-200";
-      case "Cancelled":
+      case "cancelled":
         return "bg-red-100 text-red-700 border-red-200";
       default:
         return "bg-gray-100 text-gray-700 border-gray-200";
@@ -367,63 +462,73 @@ const Patients: React.FC = memo(() => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Total Patients</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">
-                {patients.length}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
-              <Users className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
+      {/* Workflow Tabs */}
+      <div className="bg-white rounded-xl p-2 shadow-sm border border-gray-100 flex flex-wrap gap-2">
+        <button
+          onClick={() => {
+            setWorkflowTab("worklist");
+            setPage(1);
+          }}
+          className={`flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-bold transition-all duration-200 cursor-pointer ${
+            workflowTab === "worklist"
+              ? "bg-[#0c213e] text-white shadow-md"
+              : "bg-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+          }`}
+        >
+          <TestTube className="w-4 h-4" />
+          Diagnostic Worklist
+          <span className={`ml-1.5 px-2 py-0.5 rounded-full text-xs font-bold ${
+            workflowTab === "worklist"
+              ? "bg-white text-[#0c213e]"
+              : "bg-gray-100 text-gray-600"
+          }`}>
+            {tabCounts.worklist}
+          </span>
+        </button>
 
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Completed</p>
-              <p className="text-3xl font-bold text-green-600 mt-1">
-                {statusCounts.Completed || 0}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
-              <TestTube className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-        </div>
+        <button
+          onClick={() => {
+            setWorkflowTab("billing");
+            setPage(1);
+          }}
+          className={`flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-bold transition-all duration-200 cursor-pointer ${
+            workflowTab === "billing"
+              ? "bg-[#0c213e] text-white shadow-md"
+              : "bg-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+          }`}
+        >
+          <IndianRupee className="w-4 h-4" />
+          Billing & Payments
+          <span className={`ml-1.5 px-2 py-0.5 rounded-full text-xs font-bold ${
+            workflowTab === "billing"
+              ? "bg-white text-[#0c213e]"
+              : "bg-gray-100 text-gray-600"
+          }`}>
+            {tabCounts.billing}
+          </span>
+        </button>
 
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Pending</p>
-              <p className="text-3xl font-bold text-yellow-600 mt-1">
-                {statusCounts.Pending || 0}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-yellow-50 rounded-xl flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-yellow-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">In Progress</p>
-              <p className="text-3xl font-bold text-blue-600 mt-1">
-                {statusCounts["In Progress"] || 0}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
-              <TestTube className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
+        <button
+          onClick={() => {
+            setWorkflowTab("archives");
+            setPage(1);
+          }}
+          className={`flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-bold transition-all duration-200 cursor-pointer ${
+            workflowTab === "archives"
+              ? "bg-[#0c213e] text-white shadow-md"
+              : "bg-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+          }`}
+        >
+          <Archive className="w-4 h-4" />
+          Archives & Receipts
+          <span className={`ml-1.5 px-2 py-0.5 rounded-full text-xs font-bold ${
+            workflowTab === "archives"
+              ? "bg-white text-[#0c213e]"
+              : "bg-gray-100 text-gray-600"
+          }`}>
+            {tabCounts.archives}
+          </span>
+        </button>
       </div>
 
       {/* Filters Section */}
@@ -521,17 +626,36 @@ const Patients: React.FC = memo(() => {
                   Patient Details
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Test Name
+                  Test / Package
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Booking Date
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Booked At
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Status
-                </th>
+                {workflowTab === "worklist" && (
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Booked At
+                  </th>
+                )}
+                {workflowTab !== "worklist" && (
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    {workflowTab === "billing" ? "Fee Amount" : "Paid Amount"}
+                  </th>
+                )}
+                {workflowTab === "worklist" && (
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Sample Status
+                  </th>
+                )}
+                {workflowTab === "billing" && (
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Payment Status
+                  </th>
+                )}
+                {workflowTab === "archives" && (
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Settlement Info
+                  </th>
+                )}
                 <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Actions
                 </th>
@@ -540,16 +664,16 @@ const Patients: React.FC = memo(() => {
             <tbody className="divide-y divide-gray-100">
               {pageItems.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
+                  <td colSpan={workflowTab === "worklist" ? 6 : 5} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
                         <Users className="w-6 h-6 text-gray-400" />
                       </div>
                       <p className="text-gray-500 font-medium">
-                        No patients found
+                        No bookings found in this view
                       </p>
                       <p className="text-sm text-gray-400">
-                        Try adjusting your filters
+                        Try adjusting your search or filters
                       </p>
                     </div>
                   </td>
@@ -601,22 +725,94 @@ const Patients: React.FC = memo(() => {
                           {formatDate(p.bookingDate)}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <p className="text-sm text-gray-600">
-                          {formatDateTime(p.bookedAt)}
-                        </p>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
-                            p.status
-                          )}`}
-                        >
-                          {p.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        {p.status === "completed" ? (
+                      {workflowTab === "worklist" && (
+                        <td className="px-6 py-4">
+                          <p className="text-sm text-gray-600">
+                            {formatDateTime(p.bookedAt)}
+                          </p>
+                        </td>
+                      )}
+                      {workflowTab !== "worklist" && (
+                        <td className="px-6 py-4">
+                          <p className="text-sm font-bold text-gray-900">
+                            ₹{p.bookingType === "package" ? p.packageId?.totalPrice || "—" : p.price || 0}
+                          </p>
+                        </td>
+                      )}
+                      {workflowTab === "worklist" && (
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
+                              p.status
+                            )}`}
+                          >
+                            {p.status}
+                          </span>
+                        </td>
+                      )}
+                      {workflowTab === "billing" && (
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-0.5">
+                            <span
+                              onClick={() => handleOpenPaymentModal(p)}
+                              className={`inline-flex w-fit px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider cursor-pointer select-none transition-all ${
+                                p.paymentStatus === "pending"
+                                  ? "bg-amber-50 text-amber-700 border-amber-100"
+                                  : "bg-red-50 text-red-700 border-red-100 hover:bg-red-100"
+                              }`}
+                            >
+                              {p.paymentStatus || "unpaid"}
+                            </span>
+                          </div>
+                        </td>
+                      )}
+                      {workflowTab === "archives" && (
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-0.5 text-xs text-gray-500">
+                            <span className="font-semibold text-gray-700 uppercase">
+                              {p.paymentMethod || "online"}
+                            </span>
+                            {p.paymentDate && (
+                              <span>
+                                {new Date(p.paymentDate).toLocaleDateString("en-IN", {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                })}
+                              </span>
+                            )}
+                            {p.transactionId && (
+                              <span className="font-mono text-[10px] text-gray-400">
+                                Ref: {p.transactionId}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      )}
+                      <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
+                        {workflowTab === "billing" && (
+                          <button
+                            onClick={() => handleOpenPaymentModal(p)}
+                            className="px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors cursor-pointer"
+                          >
+                            Collect Payment
+                          </button>
+                        )}
+                        {workflowTab === "worklist" && (
+                          p.status?.toLowerCase() === "completed" ? (
+                            <span className="text-gray-400 text-xs italic">Completed</span>
+                          ) : p.status?.toLowerCase() === "cancelled" ? (
+                            <span className="text-gray-400 text-xs italic">Cancelled</span>
+                          ) : (
+                            <button
+                              onClick={() => openUploadModal(p)}
+                              className="px-3 py-1.5 text-xs font-semibold text-white bg-[#0c213e] hover:bg-[#1a3a5f] rounded-lg transition-colors cursor-pointer"
+                            >
+                              Upload Report
+                            </button>
+                          )
+                        )}
+                        {workflowTab === "archives" && (
                           p.reportUrl ? (
                             <a
                               href={p.reportUrl}
@@ -629,15 +825,6 @@ const Patients: React.FC = memo(() => {
                           ) : (
                             <span className="text-gray-400 text-xs italic">No report uploaded</span>
                           )
-                        ) : p.status === "cancelled" ? (
-                          <span className="text-gray-400 text-xs italic">Cancelled</span>
-                        ) : (
-                          <button
-                            onClick={() => openUploadModal(p)}
-                            className="px-3 py-1.5 text-xs font-semibold text-white bg-[#0c213e] hover:bg-[#1a3a5f] rounded-lg transition-colors cursor-pointer"
-                          >
-                            Upload Report
-                          </button>
                         )}
                       </td>
                     </tr>
@@ -958,6 +1145,74 @@ const Patients: React.FC = memo(() => {
                 Submit & Complete
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {showPaymentModal && selectedBookingForPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="bg-[#0c213e] px-6 py-4 text-white">
+              <h3 className="font-bold text-lg">Collect Lab Test Fee</h3>
+              <p className="text-xs text-blue-200/80">Record details for lab test settlement</p>
+            </div>
+            
+            <form onSubmit={handleCollectPaymentSubmit} className="p-6 space-y-4">
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-1">
+                <p className="text-xs text-gray-400">Patient: <span className="font-semibold text-gray-700">{safeFullName(selectedBookingForPayment.userId)}</span></p>
+                <p className="text-xs text-gray-400">Test/Package: <span className="font-semibold text-gray-700">{selectedBookingForPayment.testName}</span></p>
+                <p className="text-sm text-gray-700 font-bold mt-1">Total Fee: <span className="text-[#0c213e] text-lg">₹{selectedBookingForPayment.bookingType === "package" ? selectedBookingForPayment.packageId?.totalPrice || "—" : selectedBookingForPayment.price || 0}</span></p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1">
+                  Payment Method
+                </label>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="cash">Cash</option>
+                  <option value="upi">UPI / Scanner</option>
+                  <option value="card">Debit/Credit Card</option>
+                  <option value="netbanking">Net Banking</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1">
+                  Transaction / Reference ID <span className="text-gray-300">(Optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={transactionId}
+                  onChange={(e) => setTransactionId(e.target.value)}
+                  placeholder="e.g. UPI Ref Number, Card receipt number"
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPaymentModal(false);
+                    setSelectedBookingForPayment(null);
+                  }}
+                  className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 text-sm font-semibold transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={paymentSaving}
+                  className="flex items-center gap-2 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-xl text-sm font-bold shadow transition cursor-pointer"
+                >
+                  {paymentSaving ? "Processing..." : "Record Settlement"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

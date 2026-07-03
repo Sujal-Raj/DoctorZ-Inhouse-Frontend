@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Home, User, UserPlus, Users, LogOut, Menu, X, Building2,ShelvingUnit, Wallet } from "lucide-react";
+import { Home, User, UserPlus, Users, LogOut, Menu, X, Building2,ShelvingUnit, Wallet, TrendingUp } from "lucide-react";
 
 interface MenuItem {
   name: string;
@@ -29,6 +29,9 @@ const ClinicSidebar: React.FC = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("clinic_portal_token");
+    localStorage.removeItem("clinicToken");
+    localStorage.removeItem("authTokenClinic");
+    localStorage.removeItem("clinicId");
     navigate("/");
   };
 
@@ -59,6 +62,11 @@ const ClinicSidebar: React.FC = () => {
       name: "Expenses",
       path: "expense-management",
       icon: <Wallet className="w-5 h-5" />,
+    },
+    {
+      name: "Revenue",
+      path: "clinic-revenue",
+      icon: <TrendingUp className="w-5 h-5" />,
     },
   ];
 

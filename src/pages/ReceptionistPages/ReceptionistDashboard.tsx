@@ -7,6 +7,7 @@ import ReceptionistBookToken from "./ReceptionistBookToken";
 import ReceptionistPatients from "./ReceptionistPatients";
 import Profile from "./ReceptionistProfile";
 import WalkInRegistration from "./WalkInRegistration";
+import ReceptionistCollections from "./ReceptionistCollections";
 
 export default function ReceptionistDashboard() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -25,6 +26,8 @@ export default function ReceptionistDashboard() {
         return <ReceptionistPatients/>  
       case "profile":
         return <Profile />;
+      case "collections":
+        return <ReceptionistCollections />;
       default:
         return <DashboardHome />;
     }
