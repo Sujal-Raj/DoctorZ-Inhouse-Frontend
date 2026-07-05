@@ -92,10 +92,12 @@ const OnlineBookingCard = ({
   b,
   onComplete,
   onPrescription,
+  completing,
 }: {
   b: OnlineBooking;
   onComplete: (id: string) => void;
   onPrescription: (b: OnlineBooking) => void;
+  completing:boolean;
 }) => {
   const dateObj = new Date(b.dateTime);
   const formattedDate = dateObj.toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
@@ -141,13 +143,25 @@ const OnlineBookingCard = ({
       {/* Actions */}
       <div className="flex flex-col gap-2 mt-auto">
         {b.status === "pending" && (
+          // <button
+          //   onClick={() => onComplete(b._id)}
+          //   className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg text-sm font-medium transition"
+          // >
+          //   <CheckIcon className="w-4 h-4" />
+          //   Complete Appointment
+          // </button>
           <button
-            onClick={() => onComplete(b._id)}
-            className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg text-sm font-medium transition"
-          >
-            <CheckIcon className="w-4 h-4" />
-            Complete Appointment
-          </button>
+  onClick={() => onComplete(b._id)}
+  disabled={completing}
+  className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 disabled:bg-green-400 disabled:cursor-not-allowed text-white py-2 rounded-lg text-sm font-medium transition"
+>
+  {completing ? "Completing..." : (
+    <>
+      <CheckIcon className="w-4 h-4" />
+      Complete Appointment
+    </>
+  )}
+</button>
         )}
         <button
           onClick={() => onPrescription(b)}
@@ -166,10 +180,12 @@ const OfflineBookingCard = ({
   b,
   onComplete,
   onPrescription,
+  completing,
 }: {
   b: OfflineBooking;
   onComplete: (id: string) => void;
   onPrescription: (b: OfflineBooking) => void;
+  completing:boolean;
 }) => {
   const formattedDate = new Date(b.date).toLocaleDateString("en-IN", {
     day: "2-digit", month: "long", year: "numeric",
@@ -219,13 +235,25 @@ const OfflineBookingCard = ({
       {/* Actions */}
       {b.status === "pending" && (
         <div className="mt-auto">
-          <button
+          {/* <button
             onClick={() => onComplete(b._id)}
             className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg text-sm font-medium transition"
           >
             <CheckIcon className="w-4 h-4" />
             Complete Appointment
-          </button>
+          </button> */}
+          <button
+  onClick={() => onComplete(b._id)}
+  disabled={completing}
+  className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 disabled:bg-green-400 disabled:cursor-not-allowed text-white py-2 rounded-lg text-sm font-medium transition"
+>
+  {completing ? "Completing..." : (
+    <>
+      <CheckIcon className="w-4 h-4" />
+      Complete Appointment
+    </>
+  )}
+</button>
           <button
             onClick={() => onPrescription(b)}
             className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg text-sm font-medium transition mt-2"
@@ -267,6 +295,7 @@ export default function DoctorAppointments() {
   const [offlineBookings, setOfflineBookings] = useState<OfflineBooking[]>([]);
   const [activeTab, setActiveTab] = useState<"online" | "offline">("offline");
   const [loading, setLoading] = useState(true);
+  const [completingId, setCompletingId] = useState<string | null>(null);
 
   const doctorId = localStorage.getItem("doctorId");
   const navigate = useNavigate();
@@ -343,19 +372,25 @@ export default function DoctorAppointments() {
 
   const completeOnline = async (id: string) => {
     try {
+      setCompletingId(id);
       await api.put(`/api/booking/${id}/status`, { status: "completed" });
       fetchOnlineBookings();
     } catch (err) {
       console.error("Failed to update online status:", err);
+    } finally{
+      setCompletingId(null);
     }
   };
 
   const completeOffline = async (id: string) => {
     try {
+      setCompletingId(id);
       await api.put(`/api/bookOffline/${id}/status`, { status: "completed" });
       fetchOfflineBookings();
     } catch (err) {
       console.error("Failed to update offline status:", err);
+    } finally{
+      setCompletingId(null);
     }
   };
 
@@ -463,6 +498,7 @@ export default function DoctorAppointments() {
                     key={b._id}
                     b={b}
                     onComplete={completeOnline}
+                    completing={completingId === b._id}
                     onPrescription={(b) =>
                       navigate(
                         `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
@@ -480,6 +516,7 @@ export default function DoctorAppointments() {
                     key={b._id}
                     b={b}
                     onComplete={completeOnline}
+                    completing={completingId === b._id}
                     onPrescription={(b) =>
                       navigate(
                         `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
@@ -497,6 +534,7 @@ export default function DoctorAppointments() {
                     key={b._id}
                     b={b}
                     onComplete={completeOnline}
+                    completing={completingId === b._id}
                     onPrescription={(b) =>
                       navigate(
                         `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
@@ -527,6 +565,7 @@ export default function DoctorAppointments() {
                     key={b._id}
                     b={b}
                     onComplete={completeOffline}
+                     completing={completingId === b._id}
                     onPrescription={(b) =>{
                         console.log(b);
   console.log("Aadhar:", b.userId?.aadhar);
@@ -547,6 +586,7 @@ export default function DoctorAppointments() {
                     key={b._id}
                     b={b}
                     onComplete={completeOffline}
+                     completing={completingId === b._id}
                     onPrescription={(b) =>
                       navigate(
                         `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.userId?.aadhar || ""}`,
@@ -564,6 +604,7 @@ export default function DoctorAppointments() {
                     key={b._id}
                     b={b}
                     onComplete={completeOffline}
+                     completing={completingId === b._id}
                     onPrescription={(b) =>
                       navigate(
                         `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.userId?.aadhar || ""}`,
