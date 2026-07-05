@@ -193,9 +193,9 @@ const PrescriptionForm: React.FC = () => {
 
   useEffect(() => {
     const s = (location.state as any) || {};
-    if (s.name && s.name !== patientName) setPatientName(s.name);
-    if (s.gender && s.gender !== patientGender) setPatientGender(s.gender);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (s.name) setPatientName(s.name);
+    if (s.gender) setPatientGender(s.gender);
+    if (s.mobileNumber) setPatientPhone(s.mobileNumber);
   }, [location.state]);
 
   const fmt = (s: string) => s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
