@@ -122,6 +122,7 @@ const PrescriptionForm: React.FC = () => {
   const location = useLocation();
 
   const [patientName, setPatientName] = useState<string | undefined>(() => (location.state as any)?.name);
+  const [patientPhone, setPatientPhone] = useState<string | undefined>(() => (location.state as any)?.mobileNumber);
   const [patientGender, setPatientGender] = useState<string | undefined>(() => (location.state as any)?.gender);
 
   const [diagnosisInput, setDiagnosisInput] = useState("");
@@ -256,7 +257,7 @@ const PrescriptionForm: React.FC = () => {
     const payload = {
       doctorId, patientAadhar, diagnosis: diagnosisInput,
       symptoms, medicines, recommendedTests: tests, notes,
-      name: patientName, gender: patientGender,
+      name: patientName, gender: patientGender, mobileNumber:patientPhone
     };
     try {
       await api.post(`/api/prescription/addPrescription/${bookingId}`, payload);
@@ -286,7 +287,7 @@ const PrescriptionForm: React.FC = () => {
           <div className="flex items-center gap-4 mt-1">
             {patientName ? (
               <p className="text-blue-200 text-sm">
-                Patient: <span className="text-white font-medium">{patientName}</span>
+                Patient: <span className="text-white font-medium">{patientName} <br />📞{patientPhone}</span> <br />
                 {patientGender && (
                   <span className="ml-2 bg-blue-800 text-blue-100 text-xs px-2 py-0.5 rounded-full">
                     {patientGender}

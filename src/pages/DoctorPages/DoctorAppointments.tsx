@@ -32,9 +32,17 @@ interface OnlineBooking {
   status: "pending" | "completed";
 }
 
+interface OfflineUser {
+  fullName?: string;
+  dob?: string;
+  gender?: string;
+  mobileNumber?: string;
+  aadhar?: string;
+}
+
 interface OfflineBooking {
   _id: string;
-  patient: Patient;
+  userId?: OfflineUser;
   bookedBy?: string;
   date: string;          // "YYYY-MM-DD"
   tokenNumber: number;
@@ -182,9 +190,13 @@ const OfflineBookingCard = ({
       <div>
         <div className="flex items-center gap-2">
           <UserIcon className="text-gray-500 w-5 h-5" />
-          <h3 className="text-base font-semibold text-gray-900 capitalize">{b.patient?.name ?? "Walk-in Patient"}</h3>
+          <h3 className="text-base font-semibold text-gray-900 capitalize">{b.userId?.fullName ?? "Walk-in Patient"}</h3>
         </div>
-        <p className="text-gray-500 text-sm ml-7">{b.patient?.age ? `${b.patient.age} yrs • ` : ""}{b.patient?.gender ?? ""}</p>
+        <p className="text-gray-500 text-sm ml-7 capitalize">{b.userId?.dob ? `${new Date().getFullYear() - new Date(b.userId.dob).getFullYear()} yrs • ` : ""}
+{b.userId?.gender ?? ""}</p>
+<p className="text-gray-500 text-sm ml-7">
+  📞{b.userId?.mobileNumber ?? "No mobile number"}
+</p>
         <p className="text-gray-500 text-sm ml-7 capitalize">BookedBy: {b.bookedBy ?? "Reception"}</p>
       </div>
 
@@ -303,7 +315,7 @@ export default function DoctorAppointments() {
       const { data } = await api.get<{ bookings: OfflineBooking[] }>(
         `/api/bookOffline/doctor/${doctorId}`
       );
-      
+      console.log(data)
       if (data.bookings?.length > 0) {
         setOfflineBookings(
           sortByDate(data.bookings, (b) => new Date(b.date))
@@ -517,10 +529,10 @@ export default function DoctorAppointments() {
                     onComplete={completeOffline}
                     onPrescription={(b) =>{
                         console.log(b);
-  console.log("Aadhar:", b.patient?.aadhar);
+  console.log("Aadhar:", b.userId?.aadhar);
                       navigate(
-                        `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
-                        { state: { name: b.patient?.name, gender: b.patient?.gender } }
+                        `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.userId?.aadhar || ""}`,
+                        { state: { name: b.userId?.fullName, gender: b.userId?.gender,mobileNumber:b.userId?.mobileNumber } }
                       )
                     }
                     }
@@ -537,8 +549,8 @@ export default function DoctorAppointments() {
                     onComplete={completeOffline}
                     onPrescription={(b) =>
                       navigate(
-                        `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
-                        { state: { name: b.patient?.name, gender: b.patient?.gender } }
+                        `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.userId?.aadhar || ""}`,
+                        { state: { name: b.userId?.fullName, gender: b.userId?.gender,mobileNumber:b.userId?.mobileNumber } }
                       )
                     }
                   />
@@ -554,8 +566,8 @@ export default function DoctorAppointments() {
                     onComplete={completeOffline}
                     onPrescription={(b) =>
                       navigate(
-                        `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
-                        { state: { name: b.patient?.name, gender: b.patient?.gender } }
+                        `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.userId?.aadhar || ""}`,
+                        { state: { name: b.userId?.fullName, gender: b.userId?.gender,mobileNumber:b.userId?.mobileNumber } }
                       )
                     }
                   />
