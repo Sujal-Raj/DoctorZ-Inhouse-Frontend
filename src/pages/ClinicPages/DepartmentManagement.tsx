@@ -8,7 +8,7 @@ import {
   TrashIcon,
   XMarkIcon,
   PlusIcon,
-  CheckCircleIcon,
+  // CheckCircleIcon,
 } from "@heroicons/react/24/outline";
 
 interface Doctor {

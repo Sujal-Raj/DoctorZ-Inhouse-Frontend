@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { DollarSign, Calendar, Users, Star, RefreshCw, Layers, CheckCircle } from "lucide-react";
+import { DollarSign, Calendar, Users, RefreshCw, Layers, CheckCircle, TrendingUp } from "lucide-react";
 import api from "../../Services/mainApi";
 import toast from "react-hot-toast";
 

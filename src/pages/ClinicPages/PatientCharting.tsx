@@ -7,7 +7,7 @@ import {
   HeartIcon,
   DocumentTextIcon,
   ClipboardDocumentCheckIcon,
-  PlusIcon,
+  // PlusIcon,
 } from "@heroicons/react/24/outline";
 
 interface Patient {
@@ -93,7 +93,7 @@ export default function PatientCharting() {
   const fetchAdmission = async () => {
     try {
       setLoading(true);
-      const res = await api.get(`/api/ipd/admissions/detail/lookup`); // Wait! We can retrieve details from list or create details lookup!
+      // const res = await api.get(`/api/ipd/admissions/detail/lookup`); // Wait! We can retrieve details from list or create details lookup!
       // Wait, we can fetch all admissions and filter by admissionId!
       const listRes = await api.get(`/api/ipd/admissions/${localStorage.getItem("clinicId")}`);
       if (listRes.data.success) {

@@ -30,7 +30,7 @@ const ClinicRevenue: React.FC = () => {
   const { clinicId } = useOutletContext<{ clinicId: string }>();
   const [stats, setStats] = useState<RevenueStats>({ totalRevenue: 0, bookingCount: 0 });
   const [doctorWise, setDoctorWise] = useState<DoctorRevenue[]>([]);
-  const [daily, setDaily] = useState<{ date: string; amount: number }[]>([]);
+  const [_daily, setDaily] = useState<{ date: string; amount: number }[]>([]);
   const [monthly, setMonthly] = useState<{ month: string; amount: number }[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);

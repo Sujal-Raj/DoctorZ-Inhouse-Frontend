@@ -5,9 +5,9 @@ import toast from "react-hot-toast";
 import {
   UserPlusIcon,
   XMarkIcon,
-  CalendarDaysIcon,
+  // CalendarDaysIcon,
   ClipboardDocumentListIcon,
-  SparklesIcon,
+  // SparklesIcon,
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
 
@@ -21,6 +21,8 @@ interface Patient {
   _id: string;
   fullName: string;
   mobileNumber: number;
+  gender: string;
+  age: number;
 }
 
 interface Bed {

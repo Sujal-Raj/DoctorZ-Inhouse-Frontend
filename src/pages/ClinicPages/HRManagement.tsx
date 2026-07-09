@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import  { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import api from "../../Services/mainApi";
 import toast from "react-hot-toast";
@@ -6,8 +6,8 @@ import {
   CalendarDaysIcon,
   CheckIcon,
   XMarkIcon,
-  ClipboardDocumentCheckIcon,
-  EnvelopeOpenIcon,
+  // ClipboardDocumentCheckIcon,
+  // EnvelopeOpenIcon,
 } from "@heroicons/react/24/outline";
 
 interface Staff {

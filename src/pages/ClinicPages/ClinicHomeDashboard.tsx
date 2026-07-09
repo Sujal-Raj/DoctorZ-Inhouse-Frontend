@@ -1,19 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import {
-  UserGroupIcon,
-  UserIcon,
   ClockIcon,
 } from "@heroicons/react/24/solid";
 import {
-  ChartBarIcon,
   UsersIcon,
   UserPlusIcon,
   ArrowRightIcon,
   BuildingOfficeIcon,
   BanknotesIcon,
   DocumentTextIcon,
-  EnvelopeIcon,
+  // EnvelopeIcon,
 } from "@heroicons/react/24/outline";
 import api from "../../Services/mainApi";
 import { useNavigate } from "react-router-dom";
@@ -219,7 +216,7 @@ const ClinicHomeDashboard: React.FC = () => {
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-bold text-lg text-gray-900">Revenue & Expense Trend</h3>
             </div>
-            <div className="h-[300px] w-full">
+            <div className="h-75 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={analytics.timeSeries.revenueTrend} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                   <defs>
@@ -237,7 +234,7 @@ const ClinicHomeDashboard: React.FC = () => {
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} tickFormatter={(value: number) => `₹${value}`} />
                   <Tooltip 
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    formatter={(value: number) => [`₹${value.toLocaleString('en-IN')}`]}
+                    formatter={(value: any) => [`₹${typeof value === 'number' ? value.toLocaleString('en-IN') : value}`]}
                   />
                   <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
                   <Area type="monotone" dataKey="expenses" name="Expenses" stroke="#ef4444" strokeWidth={3} fillOpacity={1} fill="url(#colorExpenses)" />
@@ -438,7 +435,7 @@ const ClinicHomeDashboard: React.FC = () => {
               "Track inventory low-stock alerts and request medicine orders.",
             ].map((notice, idx) => (
               <div key={idx} className="bg-white p-3.5 rounded-xl border border-amber-100/50 text-xs text-gray-650 flex items-start gap-2 shadow-3xs">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
                 <p>{notice}</p>
               </div>
             ))}

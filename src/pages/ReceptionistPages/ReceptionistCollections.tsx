@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { IndianRupee, Clock, CheckCircle, RefreshCw, AlertCircle, Sparkles } from "lucide-react";
+import { IndianRupee, Clock, CheckCircle, RefreshCw, AlertCircle } from "lucide-react";
 import api from "../../Services/mainApi";
 import toast from "react-hot-toast";
 

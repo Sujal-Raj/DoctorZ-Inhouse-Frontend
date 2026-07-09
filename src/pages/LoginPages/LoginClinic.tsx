@@ -14,6 +14,7 @@ interface LoginResponse {
     staffName: string;
     staffEmail: string;
     clinicName: string;
+    allowedFeatures?: string[];
   };
   jwtToken: string;
 }
