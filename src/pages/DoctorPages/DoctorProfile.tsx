@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Helmet } from "react-helmet";
 import api from "../../Services/mainApi";
-import { toast, Toaster } from "react-hot-toast";
+import { toast } from "react-hot-toast";
 
 // const PRIMARY = "#0C213E";
 
@@ -142,13 +142,7 @@ const DoctorProfile: React.FC = () => {
 
   return (
     <>
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 2400,
-          style: { borderRadius: "10px", background: "#333", color: "#fff" },
-        }}
-      />
+      
 
       <Helmet>
         <title>Dr. {doctor?.fullName} | Profile</title>

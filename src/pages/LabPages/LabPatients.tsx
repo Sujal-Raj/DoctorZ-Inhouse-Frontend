@@ -16,7 +16,7 @@ import {
   Archive,
 } from "lucide-react";
 import api from "../../Services/mainApi";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 
 interface PatientBooking {
   _id: string;
@@ -1216,7 +1216,7 @@ const Patients: React.FC = memo(() => {
           </div>
         </div>
       )}
-      <Toaster position="top-right" />
+      
     </div>
   );
 });

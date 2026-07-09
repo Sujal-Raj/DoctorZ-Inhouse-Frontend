@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Helmet } from "react-helmet";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { Upload, ChevronRight, ChevronLeft } from "lucide-react";
 
 import "../../index.css";
@@ -214,17 +214,7 @@ const RegisterPatient: React.FC = () => {
         <title>Patient Registration</title>
       </Helmet>
 
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 3400,
-          style: {
-            borderRadius: "10px",
-            background: "#333",
-            color: "#fff",
-          },
-        }}
-      />
+      
 
       <main className="min-h-screen bg-white flex items-center justify-center p-3">
         <section className="w-full max-w-5xl bg-white rounded-xl shadow-lg border border-gray-300 p-4 md:p-5">

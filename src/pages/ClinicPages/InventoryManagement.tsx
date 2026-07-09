@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import api from "../../Services/mainApi";
 import { Helmet } from "react-helmet";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import {
   PencilIcon,
   TrashIcon,
@@ -278,7 +278,7 @@ export default function InventoryManagement() {
 
   return (
     <>
-      <Toaster position="top-right" />
+      
       <Helmet>
         <title>Inventory Management</title>
       </Helmet>

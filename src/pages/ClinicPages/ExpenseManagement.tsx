@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import api from "../../Services/mainApi";
-import { Helmet } from "react-helmet";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import {
   PencilIcon,
   TrashIcon,
@@ -16,10 +15,6 @@ import {
   DevicePhoneMobileIcon,
   BuildingLibraryIcon,
   CurrencyRupeeIcon,
-  // CalendarDaysIcon,
-  // TagIcon,
-  // UserIcon,
-  // DocumentTextIcon,
   ChartBarIcon,
 } from "@heroicons/react/24/outline";
 
@@ -344,10 +339,8 @@ export default function ExpenseManagement() {
 
   return (
     <>
-      <Toaster position="top-right" />
-      <Helmet>
-        <title>Expense Management</title>
-      </Helmet>
+      
+
 
       <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto space-y-6">

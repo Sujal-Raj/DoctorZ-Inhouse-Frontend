@@ -18,6 +18,8 @@ interface FormErrors {
 
 export default function BookToken() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [form, setForm] = useState({
     doctorId: "",
     fullName: "",
@@ -112,6 +114,39 @@ export default function BookToken() {
     return "";
   };
 
+  const lookupPatients = async (mobile: string) => {
+    try {
+      const token = localStorage.getItem("receptionToken");
+      const res = await api.get(`/api/receptionist/search-patient/${mobile}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success && Array.isArray(res.data.patients)) {
+        setSuggestions(res.data.patients);
+        setShowSuggestions(res.data.patients.length > 0);
+      } else {
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    } catch (err) {
+      console.error(err);
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleSelectSuggestion = (p: any) => {
+    setForm((prev) => ({
+      ...prev,
+      fullName: p.fullName,
+      gender: p.gender === "Male" ? "male" : (p.gender === "Female" ? "female" : "other"),
+      dob: p.dob ? p.dob.split("T")[0] : "",
+      mobileNumber: String(p.mobileNumber),
+      aadhar: p.aadhar || "",
+    }));
+    setSuggestions([]);
+    setShowSuggestions(false);
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
 
@@ -127,6 +162,15 @@ export default function BookToken() {
     }
 
     setForm((prev) => ({ ...prev, [name]: value }));
+
+    if (name === "mobileNumber") {
+      if (value.length >= 3) {
+        lookupPatients(value);
+      } else {
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    }
 
     // Live validation: clear error as soon as field becomes valid
     const fieldError = validateField(name, value);
@@ -324,7 +368,7 @@ export default function BookToken() {
           </div>
 
           {/* Mobile Number */}
-          <div>
+          <div className="relative">
             <label className="text-sm text-gray-600">Mobile Number</label>
             <input
               type="tel"
@@ -337,6 +381,27 @@ export default function BookToken() {
               className={inputClass("mobileNumber")}
               required
             />
+            {showSuggestions && (
+              <div className="absolute z-30 w-full bg-white border border-gray-250 rounded-xl shadow-lg mt-1 max-h-48 overflow-y-auto divide-y divide-gray-150">
+                {suggestions.map((p) => (
+                  <div
+                    key={p._id}
+                    onClick={() => handleSelectSuggestion(p)}
+                    className="px-4 py-3 hover:bg-gray-50 cursor-pointer flex justify-between items-center text-xs"
+                  >
+                    <div>
+                      <p className="font-bold text-gray-900">{p.fullName}</p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">Mobile: {p.mobileNumber}</p>
+                    </div>
+                    {p.aadhar && (
+                      <span className="bg-gray-100 px-2 py-0.5 rounded text-[10px] font-mono text-gray-500">
+                        {p.aadhar}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
             {errors.mobileNumber && (
               <p className="text-red-500 text-xs mt-1">{errors.mobileNumber}</p>
             )}

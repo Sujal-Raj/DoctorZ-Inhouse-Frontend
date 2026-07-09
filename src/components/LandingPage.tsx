@@ -19,7 +19,7 @@ const loginOptions: RoleOption[] = [
   { label: "Doctor", path: "/doctor-login", icon: <Stethoscope size={15} /> },
   { label: "Clinic / Hospital", path: "/clinic-login", icon: <Hospital size={15} /> },
   { label: "Lab", path: "/lab-login", icon: <FlaskConical size={15} /> },
-  { label: "Receptionist", path: "/receptionist-login", icon: <User size={15} /> },
+  { label: "Clinic/Hospital Staff", path: "/receptionist-login", icon: <User size={15} /> },
 ];
 
 const registerOptions: RoleOption[] = [

@@ -113,14 +113,17 @@ function EditModal({ patient, onClose, onSave }: EditModalProps) {
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              Status
+              Status / Queue State
             </label>
             <select
               value={form.status}
               onChange={(e) => handleChange("status", e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             >
               <option value="pending">Pending</option>
+              <option value="registered">Registered</option>
+              <option value="waiting">Waiting</option>
+              <option value="in-consultation">In Consultation</option>
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
             </select>
