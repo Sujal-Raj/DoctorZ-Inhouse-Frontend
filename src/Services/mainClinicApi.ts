@@ -92,6 +92,7 @@ export interface RegisterClinicData {
   staffEmail: string;
   staffPassword: string;
   staffId: string;
+  subscriptionPlan: string;
   registrationCert?: File;
 }
 
@@ -148,4 +149,9 @@ export const loginClinic = async (staffId: string, staffPassword: string) => {
     console.error("❌ LoginClinic API Error:", error.response?.data || error);
     throw error;
   }
+};
+
+export const getPlans = async () => {
+  const response = await api.get("/api/saas/plans");
+  return response.data.plans || response.data;
 };

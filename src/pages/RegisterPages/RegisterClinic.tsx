@@ -2,8 +2,8 @@ import { Helmet } from "react-helmet";
 import { useForm } from "react-hook-form";
 import { useState, useEffect, useRef } from "react";
 import { Eye, EyeOff, Upload, FileText } from "lucide-react";
-import { registerClinic } from "../../Services/mainClinicApi";
-import { toast, Toaster } from "react-hot-toast";
+import { registerClinic, getPlans } from "../../Services/mainClinicApi";
+import { toast } from "react-hot-toast";
 
 type ClinicFormInputs = {
   clinicName: string;
@@ -22,6 +22,7 @@ type ClinicFormInputs = {
   staffName: string;
   staffEmail: string;
   staffPassword: string;
+  subscriptionPlan: string;
 };
 
 const RegisterClinic: React.FC = () => {
@@ -46,7 +47,20 @@ const RegisterClinic: React.FC = () => {
     return savedStep ? parseInt(savedStep) : 1;
   });
   
-  const totalSteps = 4;
+  const [plans, setPlans] = useState<any[]>([]);
+  const totalSteps = 5;
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const data = await getPlans();
+        setPlans(data);
+      } catch (err) {
+        console.error("Failed to fetch plans", err);
+      }
+    };
+    fetchPlans();
+  }, []);
 
   // Load form data from localStorage on mount
   useEffect(() => {
@@ -94,6 +108,10 @@ const RegisterClinic: React.FC = () => {
   
   const step3Fields: (keyof ClinicFormInputs)[] = [
     "email", "operatingHours", "licenseNo", "ownerAadhar", "ownerPan"
+  ];
+  
+  const step4Fields: (keyof ClinicFormInputs)[] = [
+    "staffName", "staffEmail", "staffPassword"
   ];
   
   const generateStaffID = (length = 8) => {
@@ -164,6 +182,7 @@ const RegisterClinic: React.FC = () => {
     if (currentStep === 1) fieldsToValidate = step1Fields;
     else if (currentStep === 2) fieldsToValidate = step2Fields;
     else if (currentStep === 3) fieldsToValidate = step3Fields;
+    else if (currentStep === 4) fieldsToValidate = step4Fields;
 
     const isValid = await trigger(fieldsToValidate);
     
@@ -587,21 +606,76 @@ const RegisterClinic: React.FC = () => {
     </>
   );
 
+  const renderStep5 = () => (
+    <div className="md:col-span-2 space-y-6">
+      <h3 className="text-xl font-bold text-[#0c213e] text-center mb-6">Select a Subscription Plan</h3>
+      {plans.length === 0 ? (
+        <div className="text-center text-gray-500 py-10">Loading plans...</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {plans.map((p) => {
+            const isSelected = getValues("subscriptionPlan") === p._id;
+            return (
+              <div
+                key={p._id}
+                onClick={() => setValue("subscriptionPlan", p._id, { shouldValidate: true })}
+                className={`relative border rounded-2xl p-6 cursor-pointer transition-all duration-300 ${
+                  isSelected
+                    ? "border-[#0c213e] bg-[#0c213e]/5 shadow-lg transform scale-[1.02]"
+                    : "border-gray-200 hover:border-[#0c213e]/50 hover:shadow-md"
+                }`}
+              >
+                {isSelected && (
+                  <div className="absolute top-4 right-4 bg-[#0c213e] text-white text-xs px-2 py-1 rounded-full font-bold">
+                    Selected
+                  </div>
+                )}
+                <h4 className="text-xl font-bold text-[#0c213e] uppercase mb-2">{p.name}</h4>
+                <div className="flex items-baseline mb-4">
+                  <span className="text-3xl font-extrabold text-gray-900">₹{p.priceMonthly}</span>
+                  <span className="text-gray-500 text-sm ml-1">/ mo</span>
+                </div>
+                <div className="space-y-3">
+                  {p.features.map((f: string, i: number) => {
+                    const featureNameMap: Record<string, string> = {
+                      opd: "OPD & Consultations",
+                      emr: "Electronic Medical Records",
+                      patients: "Patient Management",
+                      billing: "Billing, Expenses & Revenue",
+                      inventory: "Inventory, Assets & Suppliers",
+                      ipd: "IPD Admissions & Wards",
+                      hr: "HR, Staff & Departments",
+                      revenue: "Revenue Analytics",
+                      communication: "Communication Hub",
+                    };
+                    return (
+                      <div key={i} className="flex items-center gap-2 text-sm text-gray-600">
+                        <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                        <span className="capitalize">{featureNameMap[f] || f}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <input
+        type="hidden"
+        {...register("subscriptionPlan", { required: "Please select a subscription plan to continue." })}
+      />
+      {errors.subscriptionPlan && (
+        <p className="text-red-500 text-center font-semibold mt-4">{errors.subscriptionPlan.message}</p>
+      )}
+    </div>
+  );
+
   const progressPercentage = ((currentStep - 1) / (totalSteps - 1)) * 100;
 
   return (
     <>
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 3400,
-          style: {
-            borderRadius: "10px",
-            background: "#333",
-            color: "#fff",
-          },
-        }}
-      />
+      
 
       <Helmet>
         <title>Clinic Registration | Health Connect Portal</title>
@@ -641,18 +715,11 @@ const RegisterClinic: React.FC = () => {
             
             {/* Step Labels */}
             <div className="flex justify-between mt-3 text-xs text-gray-600">
-              <span className={currentStep >= 1 ? "font-semibold text-[#0c213e]" : ""}>
-                Clinic Info
-              </span>
-              <span className={currentStep >= 2 ? "font-semibold text-[#0c213e]" : ""}>
-                Location
-              </span>
-              <span className={currentStep >= 3 ? "font-semibold text-[#0c213e]" : ""}>
-                Owner
-              </span>
-              <span className={currentStep >= 4 ? "font-semibold text-[#0c213e]" : ""}>
-                Staff & Cert
-              </span>
+              <span className={currentStep >= 1 ? "font-semibold text-[#0c213e]" : ""}>Info</span>
+              <span className={currentStep >= 2 ? "font-semibold text-[#0c213e]" : ""}>Location</span>
+              <span className={currentStep >= 3 ? "font-semibold text-[#0c213e]" : ""}>Owner</span>
+              <span className={currentStep >= 4 ? "font-semibold text-[#0c213e]" : ""}>Staff</span>
+              <span className={currentStep >= 5 ? "font-semibold text-[#0c213e]" : ""}>Plan</span>
             </div>
           </div>
 
@@ -686,12 +753,18 @@ const RegisterClinic: React.FC = () => {
                 Staff & Certificate
               </h2>
             )}
+            {currentStep === 5 && (
+              <h2 className="md:col-span-2 text-lg font-semibold text-[#0c213e] border-b border-[#0c213e]/20 pb-2 mb-4">
+                Subscription Plan
+              </h2>
+            )}
 
             {/* Step Content - Grid works perfectly now */}
             {currentStep === 1 && renderStep1()}
             {currentStep === 2 && renderStep2()}
             {currentStep === 3 && renderStep3()}
             {currentStep === 4 && renderStep4()}
+            {currentStep === 5 && renderStep5()}
 
             {/* Navigation Buttons */}
             <div className="md:col-span-2 flex justify-between items-center mt-8 pt-4 border-t border-gray-200">

@@ -30,6 +30,7 @@ import LabProfile from './pages/LabPages/LabProfile';
 import LabTests from "./pages/LabPages/LabTests";
 import LabInventory from './pages/LabPages/LabInventory';
 import LabExpenses from './pages/LabPages/LabExpenses';
+import LabRevenue from './pages/LabPages/LabRevenue';
 import { ClinicDashboard } from './pages/ClinicPages/ClinicDashboard';
 import ClinicHomeDashboard from './pages/ClinicPages/ClinicHomeDashboard';
 import ClinicProfile from './pages/ClinicPages/ClinicProfile';
@@ -42,16 +43,37 @@ import RegisterLab from './pages/RegisterPages/RegisterLab';
 import HomeLandingPage from './components/LandingPage';
 import InventoryManagement from './pages/ClinicPages/InventoryManagement';
 import ExpenseManagement from './pages/ClinicPages/ExpenseManagement';
-
+import DoctorEarnings from './pages/DoctorPages/DoctorEarnings';
+import ClinicRevenue from './pages/ClinicPages/ClinicRevenue';
+import SuperAdminLogin from './pages/SuperAdminPages/SuperAdminLogin';
+import SuperAdminDashboard from './pages/SuperAdminPages/SuperAdminDashboard';
+import UserManagement from './pages/ClinicPages/UserManagement';
+import DepartmentManagement from './pages/ClinicPages/DepartmentManagement';
+import HRManagement from './pages/ClinicPages/HRManagement';
+import WardManagement from './pages/ClinicPages/WardManagement';
+import IPDAdmissions from './pages/ClinicPages/IPDAdmissions';
+import PatientCharting from './pages/ClinicPages/PatientCharting';
+import BillingLedger from './pages/ClinicPages/BillingLedger';
+import InvoiceCreator from './pages/ClinicPages/InvoiceCreator';
+import AssetManagement from './pages/ClinicPages/AssetManagement';
+import SupplierManagement from './pages/ClinicPages/SupplierManagement';
+import CommunicationHub from './pages/ClinicPages/CommunicationHub';
 
 function App() {
 
   return (
     <>
-     <Toaster position="top-right" reverseOrder={false} />{" "}
+     {" "}
       <ToastContainer
-       position="top-right"
-        
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
       />
       <Routes>
           <Route element={<Layout />}/>
@@ -65,6 +87,8 @@ function App() {
             <Route path="/patient-login" element={<LoginPatient />} />
             <Route path="/lab-login" element={<LoginLab />} />
             <Route path="/lab-register" element={<RegisterLab />} />
+            <Route path="/super-admin-login" element={<SuperAdminLogin />} />
+            <Route path="/super-admin-dashboard" element={<SuperAdminDashboard />} />
 
             {/* Doctor Dashboard */}
           <Route path="/doctordashboard/:drId" element={<DoctorDashboard />}>
@@ -93,6 +117,7 @@ function App() {
             <Route path="doctorProfile" element={<DoctorProfile />} />
             <Route path="notifications" element={<DoctorNotifications />} />
             <Route path="add-medicine" element={<AddMedicine />} />
+            <Route path="earnings" element={<DoctorEarnings />} />
     </Route>
 
             <Route path="/lab-dashboard" element={<LabDashboard />}>
@@ -108,6 +133,7 @@ function App() {
             <Route path="profile" element={<LabProfile />} />
             <Route path="inventory" element={<LabInventory />} />
             <Route path="expenses" element={<LabExpenses />} />
+            <Route path="revenue" element={<LabRevenue />} />
           </Route>
 
           <Route
@@ -126,6 +152,18 @@ function App() {
             <Route path="all-clinic-patients" element={<AllClinicPatients />} />
             <Route path="inventory-management" element={<InventoryManagement />} />
             <Route path="expense-management" element={<ExpenseManagement />} />
+            <Route path="clinic-revenue" element={<ClinicRevenue />} />
+            <Route path="user-management" element={<UserManagement />} />
+            <Route path="department-management" element={<DepartmentManagement />} />
+            <Route path="hr-management" element={<HRManagement />} />
+            <Route path="ward-management" element={<WardManagement />} />
+            <Route path="ipd-admissions" element={<IPDAdmissions />} />
+            <Route path="patient-charting/:admissionId" element={<PatientCharting />} />
+            <Route path="billing-ledger" element={<BillingLedger />} />
+            <Route path="invoice-creator" element={<InvoiceCreator />} />
+            <Route path="asset-management" element={<AssetManagement />} />
+            <Route path="supplier-management" element={<SupplierManagement />} />
+            <Route path="communication-hub" element={<CommunicationHub />} />
           </Route>
 
           <Route path='/receptionist-login' element={<LoginReceptionist/>}/>

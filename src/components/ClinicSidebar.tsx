@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Home, User, UserPlus, Users, LogOut, Menu, X, Building2,ShelvingUnit, Wallet } from "lucide-react";
+import { Home, User, UserPlus, Users, LogOut, Menu, X, Building2, ShelvingUnit, Wallet, TrendingUp, UserCheck, Network, CalendarCheck, BedDouble, Hospital, ReceiptText, Wrench, Truck, MessageSquare } from "lucide-react";
 
 interface MenuItem {
   name: string;
@@ -27,12 +27,78 @@ const ClinicSidebar: React.FC = () => {
     setSidebarOpen(isDesktop);
   }, [isDesktop]);
 
+  const userRole = localStorage.getItem("userRole");
+  const userPermissionsStr = localStorage.getItem("userPermissions");
+  const userPermissions = userPermissionsStr ? JSON.parse(userPermissionsStr) : [];
+  
+  const clinicFeaturesStr = localStorage.getItem("clinicFeatures");
+  const clinicFeatures: string[] = clinicFeaturesStr ? JSON.parse(clinicFeaturesStr) : ["opd", "emr", "patients"]; // Default to basic if missing
+
+  const isFeatureEnabled = (featureName: string) => {
+    // If it's a basic feature, always return true, otherwise check clinicFeatures array
+    if (["opd", "emr", "patients"].includes(featureName)) return true;
+    return clinicFeatures.includes(featureName);
+  };
+
+  const isAllowed = (path: string) => {
+    // Determine the required SaaS feature for the path
+    let requiredFeature = "";
+    if (["billing-ledger", "expense-management", "clinic-revenue"].includes(path)) requiredFeature = "billing";
+    if (["hr-management", "user-management", "department-management"].includes(path)) requiredFeature = "hr";
+    if (["ward-management", "ipd-admissions"].includes(path)) requiredFeature = "ipd";
+    if (["inventory-management", "supplier-management", "asset-management"].includes(path)) requiredFeature = "inventory";
+    if (["communication-hub"].includes(path)) requiredFeature = "communication";
+
+    // If a required SaaS feature is not enabled for this clinic, block it for EVERYONE
+    if (requiredFeature && !isFeatureEnabled(requiredFeature)) {
+      return false;
+    }
+
+    // Default dashboard and profile should always be visible
+    if (path === "clinic-home-dashboard" || path === "clinic-profile") return true;
+
+    // If no role is set, assume it's the clinic owner/admin
+    if (!userRole || userRole === "Admin" || userRole === "Clinic/Hospital") return true;
+
+    // Role-based baseline access
+    if (userRole === "Receptionist") {
+      const allowed = ["clinic-home-dashboard", "clinic-profile", "all-clinic-doctors", "all-clinic-patients", "ward-management", "ipd-admissions", "communication-hub"];
+      if (allowed.includes(path)) return true;
+    }
+    if (userRole === "Cashier" || userRole === "Accountant") {
+      const allowed = ["clinic-home-dashboard", "clinic-profile", "billing-ledger", "expense-management", "clinic-revenue"];
+      if (allowed.includes(path)) return true;
+    }
+    if (userRole === "HR") {
+      const allowed = ["clinic-home-dashboard", "clinic-profile", "user-management", "hr-management", "department-management"];
+      if (allowed.includes(path)) return true;
+    }
+    if (userRole === "Store Manager") {
+      const allowed = ["clinic-home-dashboard", "clinic-profile", "inventory-management", "supplier-management", "asset-management"];
+      if (allowed.includes(path)) return true;
+    }
+
+    // Explicit permission overrides from user creation array
+    if (userPermissions.includes("billing") && ["billing-ledger", "expense-management", "clinic-revenue"].includes(path)) return true;
+    if (userPermissions.includes("hr") && ["hr-management", "user-management", "department-management"].includes(path)) return true;
+    if (userPermissions.includes("inventory") && ["inventory-management", "supplier-management", "asset-management"].includes(path)) return true;
+    if (userPermissions.includes("opd") && ["all-clinic-patients", "all-clinic-doctors", "add-doctor"].includes(path)) return true;
+    if (userPermissions.includes("ipd") && ["ward-management", "ipd-admissions"].includes(path)) return true;
+
+    return false;
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("clinic_portal_token");
+    localStorage.removeItem("clinicToken");
+    localStorage.removeItem("authTokenClinic");
+    localStorage.removeItem("clinicId");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userPermissions");
     navigate("/");
   };
 
-  const menuItems: MenuItem[] = [
+  const allMenuItems: MenuItem[] = [
     {
       name: "Dashboard",
       path: "clinic-home-dashboard",
@@ -44,7 +110,6 @@ const ClinicSidebar: React.FC = () => {
       icon: <User className="w-5 h-5" />,
     },
     { name: "Add Doctor", path: "add-doctor", icon: <UserPlus className="w-5 h-5" /> },
-    { name: "My Profile", path: "clinic-profile", icon: <User className="w-5 h-5" /> },
     {
       name: "Patients",
       path: "all-clinic-patients",
@@ -60,7 +125,60 @@ const ClinicSidebar: React.FC = () => {
       path: "expense-management",
       icon: <Wallet className="w-5 h-5" />,
     },
+    {
+      name: "Revenue",
+      path: "clinic-revenue",
+      icon: <TrendingUp className="w-5 h-5" />,
+    },
+    {
+      name: "Staff & Users",
+      path: "user-management",
+      icon: <UserCheck className="w-5 h-5" />,
+    },
+    {
+      name: "Departments",
+      path: "department-management",
+      icon: <Network className="w-5 h-5" />,
+    },
+    {
+      name: "HR & Attendance",
+      path: "hr-management",
+      icon: <CalendarCheck className="w-5 h-5" />,
+    },
+    {
+      name: "Wards & Beds",
+      path: "ward-management",
+      icon: <BedDouble className="w-5 h-5" />,
+    },
+    {
+      name: "IPD Admissions",
+      path: "ipd-admissions",
+      icon: <Hospital className="w-5 h-5" />,
+    },
+    {
+      name: "Billing & Invoicing",
+      path: "billing-ledger",
+      icon: <ReceiptText className="w-5 h-5" />,
+    },
+    {
+      name: "Asset Maintenance",
+      path: "asset-management",
+      icon: <Wrench className="w-5 h-5" />,
+    },
+    {
+      name: "Supplier Ledgers",
+      path: "supplier-management",
+      icon: <Truck className="w-5 h-5" />,
+    },
+    {
+      name: "Communications",
+      path: "communication-hub",
+      icon: <MessageSquare className="w-5 h-5" />,
+    },
+    { name: "My Profile", path: "clinic-profile", icon: <User className="w-5 h-5" /> },
   ];
+
+  const menuItems = allMenuItems.filter(item => isAllowed(item.path));
 
   return (
     <>

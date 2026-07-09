@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { registerLab } from "../../Services/labApi";
-import { toast, Toaster } from "react-hot-toast";
+import { toast } from "react-hot-toast";
 
 interface Timings {
   open: string;
@@ -338,17 +338,7 @@ export default function RegisterLab() {
 
   return (
     <>
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 3400,
-          style: {
-            borderRadius: "10px",
-            background: "#333",
-            color: "#fff",
-          },
-        }}
-      />
+      
 
       <main className="min-h-screen bg-linear-to-br from-indigo-50 via-white to-sky-50 flex items-center justify-center px-6 ">
         <section className="w-full max-w-3xl bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-gray-100 p-10 animate-fade-in">

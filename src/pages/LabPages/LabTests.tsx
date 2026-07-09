@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import axios from "axios";
 import { Search, Plus, Box, Edit3, Trash2, X, TestTube, Package, Filter, ChevronDown } from "lucide-react";
-import { toast, Toaster } from "react-hot-toast";
+import { toast } from "react-hot-toast";
 
 /* -------------------- Types -------------------- */
 interface LabDashboardContext {
@@ -398,17 +398,7 @@ const [deleteLoading, setDeleteLoading] = useState(false);
   /* -------------------- JSX (kept from original UI) -------------------- */
   return (
     <div className="space-y-6">
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 3400,
-          style: {
-            borderRadius: "10px",
-            background: "#333",
-            color: "#fff",
-          },
-        }}
-      />
+      
 
       {/* Header */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">

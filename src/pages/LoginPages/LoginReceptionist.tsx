@@ -36,34 +36,57 @@ export default function LoginReceptionist() {
     setSuccessMsg("");
 
     if (!receptionId || !password) {
-      setErrorMsg("Please enter Reception ID and Password.");
+      setErrorMsg("Please enter your Staff ID / Reception ID and Password.");
       return;
     }
 
     try {
       setLoading(true);
+      let res;
+      let isStaff = false;
 
-      const res = await api.post<LoginResponse>(
-        "/api/receptionist/login",
-        {
+      try {
+        // Try new unified RBAC staff login first
+        res = await api.post("/api/staff/login", {
+          staffId: receptionId,
+          password,
+        });
+        isStaff = true;
+      } catch (err) {
+        // Fallback to old legacy receptionist login
+        res = await api.post<LoginResponse>("/api/receptionist/login", {
           receptionId,
           password,
+        });
+      }
+
+      if (isStaff) {
+        localStorage.setItem("clinicToken", res.data.token);
+        localStorage.setItem("receptionToken", res.data.token);
+        localStorage.setItem("clinicId", res.data.staff.clinicId);
+        localStorage.setItem("userRole", res.data.staff.role);
+        if (res.data.staff.permissions) {
+          localStorage.setItem("userPermissions", JSON.stringify(res.data.staff.permissions));
         }
-      );
-      console.log(res);
+        localStorage.setItem("clinicFeatures", JSON.stringify(res.data.staff.allowedFeatures || []));
+        
+        setSuccessMsg(`Welcome ${res.data.staff.fullName} (${res.data.staff.role})! Redirecting...`);
+        setTimeout(() => {
+          navigate(`/clinicDashboard/${res.data.staff.clinicId}`);
+        }, 1200);
+      } else {
+        // Save old data
+        localStorage.setItem("receptionToken", res.data.token);
+        localStorage.setItem("authTokenReception", res.data.token);
+        localStorage.setItem("receptionistId", res.data.receptionist.id);
+        localStorage.setItem("clinicId", res.data.receptionist.clinic);
+        localStorage.setItem("userRole", "Receptionist");
 
-      // Save data
-      localStorage.setItem("receptionToken", res.data.token);
-      localStorage.setItem("authTokenReception", res.data.token);
-      localStorage.setItem("receptionistId", res.data.receptionist.id);
-      localStorage.setItem("clinicId", res.data.receptionist.clinic);
-
-      setSuccessMsg(`Welcome ${res.data.receptionist.receptionId}! Redirecting...`);
-
-      setTimeout(() => {
-        navigate(`/receptionistDashboard/${res.data.receptionist.id}`);
-      }, 1200);
-
+        setSuccessMsg(`Welcome ${res.data.receptionist.receptionId}! Redirecting...`);
+        setTimeout(() => {
+          navigate(`/receptionistDashboard/${res.data.receptionist.id}`);
+        }, 1200);
+      }
     } catch (err) {
       console.error("Login error:", err);
       setErrorMsg("Invalid credentials or unauthorized access.");
@@ -75,10 +98,10 @@ export default function LoginReceptionist() {
   return (
     <>
       <Helmet>
-        <title>Receptionist Login | DoctorZ Healthcare</title>
+        <title>Staff Portal Login | DoctorZ Healthcare</title>
         <meta
           name="description"
-          content="Login to your receptionist account to manage appointments and patient records."
+          content="Login to your staff account to manage hospital operations."
         />
       </Helmet>
 
@@ -87,13 +110,13 @@ export default function LoginReceptionist() {
         <div className="w-[90%] max-w-md bg-white rounded-2xl shadow-lg border border-[#dfe3f7] p-8 sm:p-10 text-center transition-all duration-300">
 
           <h1 className="text-3xl sm:text-4xl font-bold text-black mb-3">
-            Receptionist Login
+            Clinic Staff Portal
           </h1>
 
           <p className="text-gray-500 text-sm sm:text-base mb-6">
             Sign in to access your{" "}
             <span className="font-semibold text-[#0c213e]">
-              receptionist dashboard
+              staff workspace
             </span>.
           </p>
 
@@ -113,14 +136,14 @@ export default function LoginReceptionist() {
 
           <form onSubmit={handleSubmit} className="space-y-5 text-left">
 
-            {/* Reception ID */}
+            {/* Staff ID */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Reception ID
+                Staff ID / Reception ID
               </label>
               <input
                 type="text"
-                placeholder="Enter your Reception ID"
+                placeholder="e.g. STF-ADM-1234"
                 value={receptionId}
                 onChange={(e) => setReceptionId(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#0c213e] bg-gray-50 transition"

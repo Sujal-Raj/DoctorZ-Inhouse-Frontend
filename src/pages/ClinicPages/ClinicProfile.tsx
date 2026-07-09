@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
 import api from "../../Services/mainApi";
 import { Helmet } from "react-helmet";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import {
   PencilIcon,
   TrashIcon,
@@ -195,7 +195,7 @@ export default function ClinicProfile() {
 
   return (
     <>
-      <Toaster position="top-right" />
+      
       <Helmet>
         <title>{clinic?.clinicName || "Clinic"} | Clinic Profile</title>
       </Helmet>

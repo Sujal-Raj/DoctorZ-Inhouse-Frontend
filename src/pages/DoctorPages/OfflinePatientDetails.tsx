@@ -161,7 +161,13 @@ const OfflinePatientDetails: React.FC = () => {
   }, [drId, userId]);
 
   const patientAadhar =
-    typeof booking?.userId === "object" && booking.userId?.aadhar ? booking.userId.aadhar : "";
+    typeof booking?.userId === "object" && booking.userId?.aadhar
+      ? booking.userId.aadhar
+      : (typeof booking?.userId === "object" && booking.userId?._id
+        ? booking.userId._id
+        : (typeof booking?.userId === "string"
+          ? booking.userId
+          : ""));
 
   useEffect(() => {
     if (!patientAadhar) return;
@@ -349,33 +355,85 @@ const OfflinePatientDetails: React.FC = () => {
                   )}
                 </div>
 
-                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                  <div className="mb-4 flex items-center gap-2">
+                <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-xs md:col-span-2">
+                  <div className="mb-6 flex items-center gap-2 border-b border-gray-100 pb-4">
                     <Stethoscope className="h-5 w-5 text-[#0c213e]" />
-                    <h2 className="text-lg font-semibold text-gray-900">Consultation Records</h2>
+                    <h2 className="text-lg font-bold text-gray-900">Patient EMR Timeline</h2>
                   </div>
 
                   {emrRecords.length > 0 ? (
-                    <div className="space-y-3">
-                      {emrRecords.slice(0, 3).map((record) => (
-                        <div key={record._id} className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-sm font-semibold text-gray-800">
-                              {record.diagnosis || "General Consultation"}
-                            </span>
-                            <span className="text-xs text-gray-400">{formatDate(record.createdAt)}</span>
+                    <div className="relative border-l border-gray-200 ml-4 space-y-6">
+                      {emrRecords.map((record) => (
+                        <div key={record._id} className="relative pl-6 pb-2">
+                          <span className="absolute -left-3 top-1 flex items-center justify-center w-6 h-6 bg-blue-50 border-2 border-[#0c213e] rounded-full ring-4 ring-white">
+                            <Stethoscope className="w-3 h-3 text-[#0c213e]" />
+                          </span>
+                          <div className="bg-gray-50/50 border border-gray-150 p-5 rounded-xl shadow-xs">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+                              <h3 className="font-bold text-[#0c213e] text-base">
+                                {record.diagnosis || "General Medical Consultation"}
+                              </h3>
+                              <span className="text-xs font-semibold text-gray-400 bg-white border border-gray-200 px-2 py-0.5 rounded-md">
+                                {formatDate(record.createdAt)}
+                              </span>
+                            </div>
+
+                            {/* Symptoms / Diseases */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-gray-650">
+                              <div>
+                                <span className="font-bold uppercase tracking-wider text-[9px] text-gray-400 block mb-0.5">Diagnosed Conditions</span>
+                                <p className="mt-0.5 font-semibold text-gray-800">
+                                  {record.diseases?.length ? record.diseases.join(", ") : "Not documented"}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="font-bold uppercase tracking-wider text-[9px] text-gray-400 block mb-0.5">Allergies Flagged</span>
+                                <p className="mt-0.5 font-bold text-red-650">
+                                  {record.allergies?.length ? record.allergies.join(", ") : "None Reported"}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Current Medications */}
+                            {record.currentMedications && record.currentMedications.length > 0 && (
+                              <div className="mt-4 text-xs">
+                                <span className="font-bold uppercase tracking-wider text-[9px] text-gray-400 block mb-1">Prescribed Medication Course</span>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {record.currentMedications.map((med, idx) => (
+                                    <span key={idx} className="px-2.5 py-1 bg-green-50 border border-green-200 text-green-700 rounded-lg text-xs font-semibold">
+                                      {med}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Uploaded Diagnostic Reports */}
+                            {record.reports && record.reports.length > 0 && (
+                              <div className="mt-4 text-xs">
+                                <span className="font-bold uppercase tracking-wider text-[9px] text-gray-400 block mb-1">Diagnostic Report Attachments</span>
+                                <div className="flex flex-wrap gap-2 mt-1.5">
+                                  {record.reports.map((url, idx) => (
+                                    <a
+                                      key={idx}
+                                      href={url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 border border-gray-200 rounded-xl text-blue-600 font-bold transition-colors shadow-2xs"
+                                    >
+                                      <FileText className="w-3.5 h-3.5 text-gray-400" />
+                                      View Report #{idx + 1}
+                                    </a>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
-                          <p className="mt-2 text-xs text-gray-500">
-                            Diseases: {record.diseases?.length ? record.diseases.join(", ") : "None reported"}
-                          </p>
-                          <p className="mt-1 text-xs text-gray-500">
-                            Reports: {record.reports?.length || 0}
-                          </p>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-400">No consultation records found.</p>
+                    <p className="text-sm text-gray-400 italic py-6 text-center">No consultation timeline history found.</p>
                   )}
                 </div>
               </div>

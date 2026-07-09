@@ -7,7 +7,7 @@ import { registerDoctor } from "../../Services/doctorApi";
 import { FileText, Upload, ChevronRight, ChevronLeft } from "lucide-react";
 
 // ✅ Toastify
-import { toast, Toaster } from "react-hot-toast";
+import { toast } from "react-hot-toast";
 
 type DoctorFormInputs = {
   fullName: string;
@@ -258,17 +258,7 @@ const RegisterDoctor: React.FC = () => {
 
   return (
     <>
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 3400,
-          style: {
-            borderRadius: "10px",
-            background: "#333",
-            color: "#fff",
-          },
-        }}
-      />
+      
 
       <Helmet>
         <title>Doctor Registration | Clinic Portal</title>

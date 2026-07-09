@@ -51,6 +51,9 @@ export default function LoginClinic() {
       localStorage.setItem("clinicToken", res.data.jwtToken);
       localStorage.setItem("authTokenClinic", res.data.jwtToken);
       localStorage.setItem("clinicId", res.data.clinic.id);
+      localStorage.setItem("userRole", "Admin"); // The owner is the main Admin
+      localStorage.setItem("userPermissions", JSON.stringify(["all"])); // Owner has all permissions
+      localStorage.setItem("clinicFeatures", JSON.stringify(res.data.clinic.allowedFeatures || []));
 
       setSuccessMsg(`Welcome ${res.data.clinic.staffName}! Redirecting...`);
 
