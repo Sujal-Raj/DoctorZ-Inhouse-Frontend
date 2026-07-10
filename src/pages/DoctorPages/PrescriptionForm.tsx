@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { X, Plus } from "lucide-react";
 import api from "../../Services/mainApi";
 import Swal from "sweetalert2";
@@ -120,6 +120,7 @@ const PrescriptionForm: React.FC = () => {
   const { bookingId, patientAadhar } = useParams();
   const doctorId = localStorage.getItem("doctorId") || undefined;
   const location = useLocation();
+  const navigate = useNavigate();
 
   const [patientName, setPatientName] = useState<string | undefined>(() => (location.state as any)?.name);
   const [patientPhone, setPatientPhone] = useState<string | undefined>(() => (location.state as any)?.mobileNumber);
@@ -261,8 +262,18 @@ const PrescriptionForm: React.FC = () => {
     };
     try {
       await api.post(`/api/prescription/addPrescription/${bookingId}`, payload);
+      const doneIds = JSON.parse(localStorage.getItem("doctorPrescribedBookingIds") || "[]") as string[];
+      if (!doneIds.includes(bookingId)) {
+        localStorage.setItem("doctorPrescribedBookingIds", JSON.stringify([...doneIds, bookingId]));
+      }
       Swal.fire({ title: "Prescription Saved!", icon: "success" });
       setDiagnosisInput(""); setSymptoms([]); setTests([]); setMedicines([]); setNotes("");
+      if (doctorId) {
+        navigate(`/doctordashboard/${doctorId}/appointments`, {
+          replace: true,
+          state: { prescribedBookingId: bookingId },
+        });
+      }
     } catch (err: any) {
       console.error("Prescription saving failed:", err);
       Swal.fire({
@@ -336,7 +347,7 @@ const PrescriptionForm: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => addSymptom(symptomInput)}
-                  className="flex-shrink-0 flex items-center gap-1 px-4 py-2 bg-[#0c213e] hover:bg-blue-800 text-white text-sm font-medium rounded-lg transition"
+                  className="shrink-0 flex items-center gap-1 px-4 py-2 bg-[#0c213e] hover:bg-blue-800 text-white text-sm font-medium rounded-lg transition"
                 >
                   <Plus size={14} /> Add
                 </button>
@@ -452,7 +463,7 @@ const PrescriptionForm: React.FC = () => {
                 <button
                   type="button"
                   onClick={addTest}
-                  className="flex-shrink-0 flex items-center gap-1 px-4 py-2 bg-[#0c213e] hover:bg-blue-800 text-white text-sm font-medium rounded-lg transition"
+                  className="shrink-0 flex items-center gap-1 px-4 py-2 bg-[#0c213e] hover:bg-blue-800 text-white text-sm font-medium rounded-lg transition"
                 >
                   <Plus size={14} /> Add
                 </button>

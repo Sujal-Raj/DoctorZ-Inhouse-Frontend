@@ -11,7 +11,7 @@ import {
   VideoCameraIcon,
 } from "@heroicons/react/24/solid";
 import api from "../../Services/mainApi";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -71,6 +71,23 @@ const getWeekBounds = () => {
 const sortByDate = <T,>(list: T[], getDate: (item: T) => Date) =>
   [...list].sort((a, b) => getDate(a).getTime() - getDate(b).getTime());
 
+const PRESCRIBED_BOOKING_KEY = "doctorPrescribedBookingIds";
+
+const getPrescribedBookingIds = () => {
+  if (typeof window === "undefined") return [];
+  try {
+    const stored = localStorage.getItem(PRESCRIBED_BOOKING_KEY);
+    return stored ? (JSON.parse(stored) as string[]) : [];
+  } catch {
+    return [];
+  }
+};
+
+const savePrescribedBookingIds = (ids: string[]) => {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(PRESCRIBED_BOOKING_KEY, JSON.stringify(ids));
+};
+
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
 const StatusBadge = ({ status }: { status: string }) => {
@@ -93,11 +110,13 @@ const OnlineBookingCard = ({
   onComplete,
   onPrescription,
   completing,
+  prescribed,
 }: {
   b: OnlineBooking;
   onComplete: (id: string) => void;
   onPrescription: (b: OnlineBooking) => void;
   completing:boolean;
+  prescribed:boolean;
 }) => {
   const dateObj = new Date(b.dateTime);
   const formattedDate = dateObj.toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
@@ -165,9 +184,10 @@ const OnlineBookingCard = ({
         )}
         <button
           onClick={() => onPrescription(b)}
-          className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg text-sm font-medium transition"
+          disabled={prescribed}
+          className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-2 rounded-lg text-sm font-medium transition"
         >
-          Give Prescription
+          {prescribed ? "Prescription Done" : "Give Prescription"}
         </button>
       </div>
     </div>
@@ -181,11 +201,13 @@ const OfflineBookingCard = ({
   onComplete,
   onPrescription,
   completing,
+  prescribed,
 }: {
   b: OfflineBooking;
   onComplete: (id: string) => void;
   onPrescription: (b: OfflineBooking) => void;
   completing:boolean;
+  prescribed:boolean;
 }) => {
   const formattedDate = new Date(b.date).toLocaleDateString("en-IN", {
     day: "2-digit", month: "long", year: "numeric",
@@ -256,9 +278,10 @@ const OfflineBookingCard = ({
 </button>
           <button
             onClick={() => onPrescription(b)}
-            className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg text-sm font-medium transition mt-2"
+            disabled={prescribed}
+            className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-2 rounded-lg text-sm font-medium transition mt-2"
           >
-            Give Prescription
+            {prescribed ? "Prescription Done" : "Give Prescription"}
           </button>
         </div>
       )}
@@ -296,9 +319,11 @@ export default function DoctorAppointments() {
   const [activeTab, setActiveTab] = useState<"online" | "offline">("offline");
   const [loading, setLoading] = useState(true);
   const [completingId, setCompletingId] = useState<string | null>(null);
+  const [prescribedIds, setPrescribedIds] = useState<string[]>(() => getPrescribedBookingIds());
 
   const doctorId = localStorage.getItem("doctorId");
   const navigate = useNavigate();
+  const location = useLocation();
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
@@ -367,6 +392,18 @@ export default function DoctorAppointments() {
   useEffect(() => {
     fetchAll();
   }, []);
+
+  useEffect(() => {
+    const incomingId = (location.state as { prescribedBookingId?: string } | null)?.prescribedBookingId;
+    if (!incomingId) return;
+
+    setPrescribedIds((prev) => {
+      if (prev.includes(incomingId)) return prev;
+      const next = [...prev, incomingId];
+      savePrescribedBookingIds(next);
+      return next;
+    });
+  }, [location.state]);
 
   // ── Status updates ─────────────────────────────────────────────────────────
 
@@ -499,6 +536,7 @@ export default function DoctorAppointments() {
                     b={b}
                     onComplete={completeOnline}
                     completing={completingId === b._id}
+                    prescribed={prescribedIds.includes(b._id)}
                     onPrescription={(b) =>
                       navigate(
                         `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
@@ -517,6 +555,7 @@ export default function DoctorAppointments() {
                     b={b}
                     onComplete={completeOnline}
                     completing={completingId === b._id}
+                    prescribed={prescribedIds.includes(b._id)}
                     onPrescription={(b) =>
                       navigate(
                         `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
@@ -535,6 +574,7 @@ export default function DoctorAppointments() {
                     b={b}
                     onComplete={completeOnline}
                     completing={completingId === b._id}
+                    prescribed={prescribedIds.includes(b._id)}
                     onPrescription={(b) =>
                       navigate(
                         `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
@@ -566,6 +606,7 @@ export default function DoctorAppointments() {
                     b={b}
                     onComplete={completeOffline}
                      completing={completingId === b._id}
+                     prescribed={prescribedIds.includes(b._id)}
                     onPrescription={(b) =>{
                         console.log(b);
   console.log("Aadhar:", b.userId?.aadhar);
@@ -587,6 +628,7 @@ export default function DoctorAppointments() {
                     b={b}
                     onComplete={completeOffline}
                      completing={completingId === b._id}
+                     prescribed={prescribedIds.includes(b._id)}
                     onPrescription={(b) =>
                       navigate(
                         `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.userId?.aadhar || ""}`,
@@ -605,6 +647,7 @@ export default function DoctorAppointments() {
                     b={b}
                     onComplete={completeOffline}
                      completing={completingId === b._id}
+                     prescribed={prescribedIds.includes(b._id)}
                     onPrescription={(b) =>
                       navigate(
                         `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.userId?.aadhar || ""}`,
