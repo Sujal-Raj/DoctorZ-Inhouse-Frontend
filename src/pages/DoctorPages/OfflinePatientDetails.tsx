@@ -58,9 +58,9 @@ interface EMRRecord {
   updatedAt: string;
 }
 
-interface EMRResponse {
-  emr: EMRRecord[];
-}
+// interface EMRResponse {
+//   emr: EMRRecord[];
+// }
 
 interface PrescriptionItem {
   _id: string;
@@ -189,14 +189,14 @@ const OfflinePatientDetails: React.FC = () => {
     fetchHistory();
   }, [drId, userId]);
 
-  const patientAadhar =
-    typeof booking?.userId === "object" && booking.userId?.aadhar
-      ? booking.userId.aadhar
-      : typeof booking?.userId === "object" && booking.userId?._id
-      ? booking.userId._id
-      : typeof booking?.userId === "string"
-      ? booking.userId
-      : "";
+  // const patientAadhar =
+  //   typeof booking?.userId === "object" && booking.userId?.aadhar
+  //     ? booking.userId.aadhar
+  //     : typeof booking?.userId === "object" && booking.userId?._id
+  //     ? booking.userId._id
+  //     : typeof booking?.userId === "string"
+  //     ? booking.userId
+  //     : "";
 
   const patientName =
     typeof booking?.userId === "object" && booking.userId?.fullName
