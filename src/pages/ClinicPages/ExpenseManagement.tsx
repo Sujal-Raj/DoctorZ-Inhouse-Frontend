@@ -43,6 +43,7 @@ interface Expense {
   description?: string;
   receipt?: string;
   addedBy?: string;
+  transactionId?:string;
 }
 
 type ExpenseFormData = Omit<Expense, "_id" | "clinicId">;
@@ -278,7 +279,7 @@ export default function ExpenseManagement() {
         await api.put(`/api/expense/update/${editExpense._id}`, formData);
         toast.success("Expense updated successfully");
       } else {
-        await api.post(`/api/expense/add`, { ...formData, clinicId });
+        await api.post(`/api/expense/add`, { ...formData, clinicId,transactionId: formData.transactionId, });
         toast.success("Expense added successfully");
       }
       setShowModal(false);
@@ -691,6 +692,14 @@ export default function ExpenseManagement() {
                   formData={formData}
                   onChange={handleChange}
                 />
+                {formData.paymentMethod !== "Cash" && (
+  <FormField
+    label="Transaction ID *"
+    name="transactionId"
+    formData={formData}
+    onChange={handleChange}
+  />
+)}
                 <FormField
                   label="Amount (₹) *"
                   name="amount"

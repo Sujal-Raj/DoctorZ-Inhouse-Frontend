@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { TrendingUp, Users, DollarSign, Calendar, RefreshCw, FileText, CheckCircle } from "lucide-react";
+import { TrendingUp, Users,  Calendar, RefreshCw, FileText, CheckCircle,IndianRupee } from "lucide-react";
 import api from "../../Services/mainApi";
 import toast from "react-hot-toast";
 
@@ -92,11 +92,11 @@ const ClinicRevenue: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-gradient-to-br from-[#0c213e] to-[#163a6b] p-6 rounded-2xl text-white shadow-md relative overflow-hidden">
           <div className="absolute right-0 bottom-0 translate-x-4 translate-y-4 opacity-10">
-            <DollarSign className="w-48 h-48" />
+            <IndianRupee className="w-48 h-48" />
           </div>
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
-              <DollarSign className="w-5 h-5 text-blue-200" />
+              <IndianRupee className="w-5 h-5 text-blue-200" />
             </div>
             <span className="text-sm font-medium text-blue-200 uppercase tracking-wide">Total Earnings</span>
           </div>

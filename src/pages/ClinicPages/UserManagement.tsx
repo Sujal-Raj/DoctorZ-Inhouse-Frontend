@@ -110,6 +110,42 @@ export default function UserManagement() {
       toast.error("Required fields are missing");
       return;
     }
+    if (fullName.trim().length < 3) {
+  return toast.error("Full name must be at least 3 characters.");
+}
+
+if (!/^[A-Za-z ]+$/.test(fullName)) {
+  return toast.error("Full name can contain only letters.");
+}
+
+if (email && !/^\S+@\S+\.\S+$/.test(email)) {
+  return toast.error("Invalid email address.");
+}
+
+if (!/^\d{10}$/.test(mobileNo)) {
+  return toast.error("Enter a valid 10-digit mobile number.");
+}
+
+if (
+  !editStaff &&
+  !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,20}$/.test(password)
+) {
+  return toast.error(
+    "Password must contain uppercase, lowercase, number and special character."
+  );
+}
+
+if (salary < 0) {
+  return toast.error("Salary cannot be negative.");
+}
+
+if (shiftStart >= shiftEnd) {
+  return toast.error("Shift end must be after shift start.");
+}
+
+if (permissions.length === 0) {
+  return toast.error("Select at least one permission.");
+}
 
     try {
       if (editStaff) {
@@ -301,12 +337,16 @@ export default function UserManagement() {
                 <div>
                   <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5">Full Name *</label>
                   <input
-                    type="text"
-                    required
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="w-full border-2 border-gray-200 focus:border-[#0c213e] rounded-xl px-4 py-2.5 text-sm outline-none transition-all"
-                  />
+  type="text"
+  required
+  minLength={3}
+  maxLength={50}
+  pattern="^[A-Za-z ]+$"
+  value={fullName}
+  onChange={(e) =>
+    setFullName(e.target.value.replace(/[^A-Za-z ]/g, ""))
+  }
+/>
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5">Role *</label>
@@ -326,20 +366,24 @@ export default function UserManagement() {
                 <div>
                   <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5">Email Address</label>
                   <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full border-2 border-gray-200 focus:border-[#0c213e] rounded-xl px-4 py-2.5 text-sm outline-none transition-all"
-                  />
+  type="email"
+  maxLength={100}
+  autoComplete="email"
+/>
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5">Mobile Number</label>
-                  <input
-                    type="text"
-                    value={mobileNo}
-                    onChange={(e) => setMobileNo(e.target.value)}
-                    className="w-full border-2 border-gray-200 focus:border-[#0c213e] rounded-xl px-4 py-2.5 text-sm outline-none transition-all"
-                  />
+                 <input
+  type="tel"
+  required
+  maxLength={10}
+  inputMode="numeric"
+  pattern="[0-9]{10}"
+  value={mobileNo}
+  onChange={(e) =>
+    setMobileNo(e.target.value.replace(/\D/g, "").slice(0, 10))
+  }
+/>
                 </div>
 
                 <div>
@@ -347,33 +391,32 @@ export default function UserManagement() {
                     {editStaff ? "Password (Leave blank to keep same)" : "Password *"}
                   </label>
                   <input
-                    type="password"
-                    required={!editStaff}
-                    placeholder={editStaff ? "••••••••" : ""}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full border-2 border-gray-200 focus:border-[#0c213e] rounded-xl px-4 py-2.5 text-sm outline-none transition-all"
-                  />
+  type="password"
+  minLength={8}
+  maxLength={20}
+  pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,20}$"
+/>
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5">Department</label>
                   <input
-                    type="text"
-                    placeholder="e.g. Reception, HR, Accounts"
-                    value={department}
-                    onChange={(e) => setDepartment(e.target.value)}
-                    className="w-full border-2 border-gray-200 focus:border-[#0c213e] rounded-xl px-4 py-2.5 text-sm outline-none transition-all"
-                  />
+  type="text"
+  maxLength={50}
+  value={department}
+  onChange={(e) =>
+    setDepartment(e.target.value.replace(/[^A-Za-z ]/g, ""))
+  }
+/>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5">Monthly Salary (₹)</label>
                   <input
-                    type="number"
-                    value={salary}
-                    onChange={(e) => setSalary(Number(e.target.value))}
-                    className="w-full border-2 border-gray-200 focus:border-[#0c213e] rounded-xl px-4 py-2.5 text-sm outline-none transition-all"
-                  />
+  type="number"
+  min={0}
+  max={1000000}
+  step={1}
+/>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>

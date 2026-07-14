@@ -67,9 +67,10 @@ export default function IPDAdmissions() {
   const [showAdmitModal, setShowAdmitModal] = useState(false);
   const [showDischargeModal, setShowDischargeModal] = useState(false);
   const [selectedAdmission, setSelectedAdmission] = useState<Admission | null>(null);
+  const [searchText, setSearchText] = useState("");
 
   // Auto-suggest patient search states
-  const [searchMobile, setSearchMobile] = useState("");
+  // const [searchMobile, setSearchMobile] = useState("");
   const [patientSuggestions, setPatientSuggestions] = useState<Patient[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
 
@@ -112,30 +113,67 @@ export default function IPDAdmissions() {
     fetchData();
   }, [clinicId]);
 
-  const handlePatientSearch = async (mobile: string) => {
-    setSearchMobile(mobile);
-    if (mobile.length < 3) {
-      setPatientSuggestions([]);
-      return;
-    }
-    try {
-      const token = localStorage.getItem("clinicToken") || localStorage.getItem("receptionToken") || localStorage.getItem("doctorToken") || localStorage.getItem("clinic_portal_token");
-      const res = await api.get(`/api/receptionist/search-patient/${mobile}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.data.success && Array.isArray(res.data.patients)) {
-        setPatientSuggestions(res.data.patients);
-      }
-    } catch {
-      // Fail silently
-    }
-  };
+  // const handlePatientSearch = async (mobile: string) => {
+  //   setSearchMobile(mobile);
+  //   if (mobile.length < 3) {
+  //     setPatientSuggestions([]);
+  //     return;
+  //   }
+  //   try {
+  //     const token = localStorage.getItem("clinicToken") || localStorage.getItem("receptionToken") || localStorage.getItem("doctorToken") || localStorage.getItem("clinic_portal_token");
+  //     const res = await api.get(`/api/receptionist/search-patient/${mobile}`, {
+  //       headers: { Authorization: `Bearer ${token}` }
+  //     });
+  //     if (res.data.success && Array.isArray(res.data.patients)) {
+  //       setPatientSuggestions(res.data.patients);
+  //     }
+  //   } catch {
+  //     // Fail silently
+  //   }
+  // };
 
-  const handleSelectPatient = (p: Patient) => {
-    setSelectedPatient(p);
-    setSearchMobile(p.fullName);
+  const handlePatientSearch = async (value: string) => {
+  setSearchText(value);
+
+  if (value.trim().length < 2) {
     setPatientSuggestions([]);
-  };
+    return;
+  }
+
+  try {
+    const token =
+      localStorage.getItem("clinicToken") ||
+      localStorage.getItem("receptionToken") ||
+      localStorage.getItem("doctorToken") ||
+      localStorage.getItem("clinic_portal_token");
+
+    const res = await api.get(
+      `/api/receptionist/search-patient/${encodeURIComponent(value)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (res.data.success) {
+      setPatientSuggestions(res.data.patients || []);
+    }
+  } catch {
+    setPatientSuggestions([]);
+  }
+};
+
+  // const handleSelectPatient = (p: Patient) => {
+  //   setSelectedPatient(p);
+  //   setSearchMobile(p.fullName);
+  //   setPatientSuggestions([]);
+  // };
+  const handleSelectPatient = (patient: Patient) => {
+  setSelectedPatient(patient);
+  setSearchText(`${patient.fullName} (${patient.mobileNumber})`);
+  setPatientSuggestions([]);
+};
 
   const handleAdmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,7 +201,7 @@ export default function IPDAdmissions() {
         setShowAdmitModal(false);
         // Clear
         setSelectedPatient(null);
-        setSearchMobile("");
+        // setSearchMobile("");
         setDoctorId("");
         setWardId("");
         setBedId("");
@@ -343,14 +381,22 @@ export default function IPDAdmissions() {
               <div className="relative">
                 <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5">Search Patient *</label>
                 <div className="relative">
-                  <input
+                  {/* <input
                     type="text"
                     required
                     placeholder="Enter mobile number to search patient"
-                    value={searchMobile}
+                    value={search}
                     onChange={(e) => handlePatientSearch(e.target.value)}
                     className="w-full border-2 border-gray-200 focus:border-[#0c213e] rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none"
-                  />
+                  /> */}
+                  <input
+  type="text"
+  required
+  placeholder="Search by patient name or mobile number"
+  value={searchText}
+  onChange={(e) => handlePatientSearch(e.target.value)}
+  className="w-full border-2 border-gray-200 focus:border-[#0c213e] rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none"
+/>
                   <MagnifyingGlassIcon className="w-5 h-5 text-gray-400 absolute left-3 top-3" />
                 </div>
                 
