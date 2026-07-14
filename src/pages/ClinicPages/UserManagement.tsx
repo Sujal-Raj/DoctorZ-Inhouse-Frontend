@@ -337,6 +337,7 @@ if (permissions.length === 0) {
                 <div>
                   <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5">Full Name *</label>
                   <input
+                   className="w-full border-2 border-gray-200 focus:border-[#0c213e] rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-white"
   type="text"
   required
   minLength={3}
@@ -366,6 +367,7 @@ if (permissions.length === 0) {
                 <div>
                   <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5">Email Address</label>
                   <input
+                   className="w-full border-2 border-gray-200 focus:border-[#0c213e] rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-white"
   type="email"
   maxLength={100}
   autoComplete="email"
@@ -374,6 +376,7 @@ if (permissions.length === 0) {
                 <div>
                   <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5">Mobile Number</label>
                  <input
+                  className="w-full border-2 border-gray-200 focus:border-[#0c213e] rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-white"
   type="tel"
   required
   maxLength={10}
@@ -391,6 +394,7 @@ if (permissions.length === 0) {
                     {editStaff ? "Password (Leave blank to keep same)" : "Password *"}
                   </label>
                   <input
+                   className="w-full border-2 border-gray-200 focus:border-[#0c213e] rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-white"
   type="password"
   minLength={8}
   maxLength={20}
@@ -400,6 +404,7 @@ if (permissions.length === 0) {
                 <div>
                   <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5">Department</label>
                   <input
+                   className="w-full border-2 border-gray-200 focus:border-[#0c213e] rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-white"
   type="text"
   maxLength={50}
   value={department}
@@ -412,6 +417,7 @@ if (permissions.length === 0) {
                 <div>
                   <label className="block text-xs font-bold uppercase text-gray-500 mb-1.5">Monthly Salary (₹)</label>
                   <input
+                   className="w-full border-2 border-gray-200 focus:border-[#0c213e] rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-white"
   type="number"
   min={0}
   max={1000000}
