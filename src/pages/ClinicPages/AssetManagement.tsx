@@ -6,7 +6,7 @@ import {
   WrenchScrewdriverIcon,
   PlusIcon,
   XMarkIcon,
-  ShieldExclamationIcon,
+  // ShieldExclamationIcon,
   WrenchIcon,
 } from "@heroicons/react/24/outline";
 

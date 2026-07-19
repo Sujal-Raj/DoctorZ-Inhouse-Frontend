@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { X, Plus } from "lucide-react";
 import api from "../../Services/mainApi";
 import Swal from "sweetalert2";
@@ -120,8 +120,10 @@ const PrescriptionForm: React.FC = () => {
   const { bookingId, patientAadhar } = useParams();
   const doctorId = localStorage.getItem("doctorId") || undefined;
   const location = useLocation();
+  const navigate = useNavigate();
 
   const [patientName, setPatientName] = useState<string | undefined>(() => (location.state as any)?.name);
+  const [patientPhone, setPatientPhone] = useState<string | undefined>(() => (location.state as any)?.mobileNumber);
   const [patientGender, setPatientGender] = useState<string | undefined>(() => (location.state as any)?.gender);
 
   const [diagnosisInput, setDiagnosisInput] = useState("");
@@ -192,9 +194,9 @@ const PrescriptionForm: React.FC = () => {
 
   useEffect(() => {
     const s = (location.state as any) || {};
-    if (s.name && s.name !== patientName) setPatientName(s.name);
-    if (s.gender && s.gender !== patientGender) setPatientGender(s.gender);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (s.name) setPatientName(s.name);
+    if (s.gender) setPatientGender(s.gender);
+    if (s.mobileNumber) setPatientPhone(s.mobileNumber);
   }, [location.state]);
 
   const fmt = (s: string) => s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -256,12 +258,22 @@ const PrescriptionForm: React.FC = () => {
     const payload = {
       doctorId, patientAadhar, diagnosis: diagnosisInput,
       symptoms, medicines, recommendedTests: tests, notes,
-      name: patientName, gender: patientGender,
+      name: patientName, gender: patientGender, mobileNumber:patientPhone
     };
     try {
       await api.post(`/api/prescription/addPrescription/${bookingId}`, payload);
+      const doneIds = JSON.parse(localStorage.getItem("doctorPrescribedBookingIds") || "[]") as string[];
+      if (!doneIds.includes(bookingId)) {
+        localStorage.setItem("doctorPrescribedBookingIds", JSON.stringify([...doneIds, bookingId]));
+      }
       Swal.fire({ title: "Prescription Saved!", icon: "success" });
       setDiagnosisInput(""); setSymptoms([]); setTests([]); setMedicines([]); setNotes("");
+      if (doctorId) {
+        navigate(`/doctordashboard/${doctorId}/appointments`, {
+          replace: true,
+          state: { prescribedBookingId: bookingId },
+        });
+      }
     } catch (err: any) {
       console.error("Prescription saving failed:", err);
       Swal.fire({
@@ -286,7 +298,7 @@ const PrescriptionForm: React.FC = () => {
           <div className="flex items-center gap-4 mt-1">
             {patientName ? (
               <p className="text-blue-200 text-sm">
-                Patient: <span className="text-white font-medium">{patientName}</span>
+                Patient: <span className="text-white font-medium">{patientName} <br />📞{patientPhone}</span> <br />
                 {patientGender && (
                   <span className="ml-2 bg-blue-800 text-blue-100 text-xs px-2 py-0.5 rounded-full">
                     {patientGender}
@@ -335,7 +347,7 @@ const PrescriptionForm: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => addSymptom(symptomInput)}
-                  className="flex-shrink-0 flex items-center gap-1 px-4 py-2 bg-[#0c213e] hover:bg-blue-800 text-white text-sm font-medium rounded-lg transition"
+                  className="shrink-0 flex items-center gap-1 px-4 py-2 bg-[#0c213e] hover:bg-blue-800 text-white text-sm font-medium rounded-lg transition"
                 >
                   <Plus size={14} /> Add
                 </button>
@@ -451,7 +463,7 @@ const PrescriptionForm: React.FC = () => {
                 <button
                   type="button"
                   onClick={addTest}
-                  className="flex-shrink-0 flex items-center gap-1 px-4 py-2 bg-[#0c213e] hover:bg-blue-800 text-white text-sm font-medium rounded-lg transition"
+                  className="shrink-0 flex items-center gap-1 px-4 py-2 bg-[#0c213e] hover:bg-blue-800 text-white text-sm font-medium rounded-lg transition"
                 >
                   <Plus size={14} /> Add
                 </button>

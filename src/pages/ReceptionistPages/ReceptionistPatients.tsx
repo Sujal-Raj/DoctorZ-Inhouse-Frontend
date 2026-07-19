@@ -185,20 +185,14 @@ export default function Patients() {
   };
 
   const filteredPatients = patients.filter((item) => {
-    const q = search.toLowerCase().trim();
-    if (!q) return true;
-    return (
-      item.patient?.toLowerCase().includes(q) ||
-      item.mobileNumber?.toLowerCase().includes(q) ||
-      item.doctor?.fullName?.toLowerCase().includes(q) ||
-      item.doctor?.specialization?.toLowerCase().includes(q) ||
-      item.mode?.toLowerCase().includes(q) ||
-      item.bookedBy?.toLowerCase().includes(q) ||
-      item.status?.toLowerCase().includes(q) ||
-      String(item.fees).includes(q) ||
-      new Date(item.date).toLocaleDateString().includes(q)
-    );
-  });
+  const q = search.toLowerCase().trim();
+  if (!q) return true;
+
+  const patientName = (item.patient || "").toLowerCase();
+  const mobile = String(item.mobileNumber || "").toLowerCase();
+
+  return patientName.includes(q) || mobile.includes(q);
+});
 
   return (
     <div className="space-y-6">
@@ -242,7 +236,7 @@ export default function Patients() {
           </svg>
           <input
             type="text"
-            placeholder="Search by name, mobileNumber, doctor..."
+            placeholder="Search by patient name or mobile number"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"

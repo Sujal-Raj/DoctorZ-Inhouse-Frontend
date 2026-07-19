@@ -7,7 +7,6 @@ import {
   PencilIcon,
   TrashIcon,
   XMarkIcon,
-  CheckIcon,
   PlusIcon,
   CubeIcon,
   BeakerIcon,

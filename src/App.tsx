@@ -1,6 +1,6 @@
 import './App.css'
 import { Route, Routes } from 'react-router-dom'
-import { Toaster } from "react-hot-toast";
+// import { Toaster } from "react-hot-toast";
 import { ToastContainer } from "react-toastify";
 
 // import Navbar from './components/Navbar'

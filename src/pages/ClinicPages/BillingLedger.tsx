@@ -6,8 +6,8 @@ import {
   BanknotesIcon,
   PlusIcon,
   XMarkIcon,
-  ShieldCheckIcon,
-  ArrowPathIcon,
+  // ShieldCheckIcon,
+  // ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 
 interface Patient {

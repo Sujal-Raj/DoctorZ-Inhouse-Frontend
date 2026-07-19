@@ -28,7 +28,8 @@ type ExpenseCategory =
   | "Maintenance"
   | "Rent"
   | "Internet"
-  | "Miscellaneous";
+  | "Miscellaneous"
+  | "Others";
 
 type PaymentMethod = "Cash" | "UPI" | "Card" | "Bank Transfer";
 
@@ -43,9 +44,12 @@ interface Expense {
   description?: string;
   receipt?: string;
   addedBy?: string;
+  transactionId?:string;
 }
 
-type ExpenseFormData = Omit<Expense, "_id" | "clinicId">;
+type ExpenseFormData = Omit<Expense, "_id" | "clinicId">  & {
+  customCategory?: string;
+};
 
 interface OutletContext {
   clinicId: string;
@@ -62,6 +66,7 @@ const CATEGORIES: ExpenseCategory[] = [
   "Rent",
   "Internet",
   "Miscellaneous",
+  "Others",
 ];
 
 const PAYMENT_METHODS: PaymentMethod[] = ["Cash", "UPI", "Card", "Bank Transfer"];
@@ -240,9 +245,10 @@ export default function ExpenseManagement() {
 
   const openEdit = (expense: Expense) => {
     setEditExpense(expense);
+    const isKnownCategory = CATEGORIES.includes(expense.category as ExpenseCategory);
     setFormData({
       title: expense.title,
-      category: expense.category,
+      category: isKnownCategory ? expense.category : "Others",
       amount: expense.amount,
       paymentMethod: expense.paymentMethod,
       expenseDate: expense.expenseDate
@@ -267,28 +273,68 @@ export default function ExpenseManagement() {
     }));
   };
 
+  // const handleSave = async () => {
+  //   if (!formData.title || !formData.amount || !formData.expenseDate) {
+  //     toast.error("Title, amount, and date are required");
+  //     return;
+  //   }
+  //   try {
+  //     setSaving(true);
+  //     if (editExpense) {
+  //       await api.put(`/api/expense/update/${editExpense._id}`, formData);
+  //       toast.success("Expense updated successfully");
+  //     } else {
+  //       await api.post(`/api/expense/add`, { ...formData, clinicId,transactionId: formData.transactionId, });
+  //       toast.success("Expense added successfully");
+  //     }
+  //     setShowModal(false);
+  //     fetchExpenses();
+  //   } catch {
+  //     toast.error(editExpense ? "Failed to update expense" : "Failed to add expense");
+  //   } finally {
+  //     setSaving(false);
+  //   }
+  // };
+
   const handleSave = async () => {
-    if (!formData.title || !formData.amount || !formData.expenseDate) {
-      toast.error("Title, amount, and date are required");
-      return;
+  const finalCategory =
+    formData.category === "Others"
+      ? formData.customCategory?.trim()
+      : formData.category;
+
+  if (!formData.title || !formData.amount || !formData.expenseDate || !finalCategory) {
+    toast.error("Title, amount, date, and category are required");
+    return;
+  }
+
+  try {
+    setSaving(true);
+
+    const payload = {
+      ...formData,
+      category: finalCategory,
+      clinicId,
+      transactionId: formData.transactionId,
+    };
+
+    delete (payload as any).customCategory;
+
+    if (editExpense) {
+      await api.put(`/api/expense/update/${editExpense._id}`, payload);
+      toast.success("Expense updated successfully");
+    } else {
+      await api.post(`/api/expense/add`, payload);
+      toast.success("Expense added successfully");
     }
-    try {
-      setSaving(true);
-      if (editExpense) {
-        await api.put(`/api/expense/update/${editExpense._id}`, formData);
-        toast.success("Expense updated successfully");
-      } else {
-        await api.post(`/api/expense/add`, { ...formData, clinicId });
-        toast.success("Expense added successfully");
-      }
-      setShowModal(false);
-      fetchExpenses();
-    } catch {
-      toast.error(editExpense ? "Failed to update expense" : "Failed to add expense");
-    } finally {
-      setSaving(false);
-    }
-  };
+
+    setShowModal(false);
+    fetchExpenses();
+  } catch {
+    toast.error(editExpense ? "Failed to update expense" : "Failed to add expense");
+  } finally {
+    setSaving(false);
+  }
+};
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -684,6 +730,14 @@ export default function ExpenseManagement() {
                   formData={formData}
                   onChange={handleChange}
                 />
+                {formData.category === "Others" && (
+  <FormField
+    label="Custom Category *"
+    name="customCategory"
+    formData={formData}
+    onChange={handleChange}
+  />
+)}
                 <FormField
                   label="Payment Method *"
                   name="paymentMethod"
@@ -691,6 +745,14 @@ export default function ExpenseManagement() {
                   formData={formData}
                   onChange={handleChange}
                 />
+                {formData.paymentMethod !== "Cash" && (
+  <FormField
+    label="Transaction ID *"
+    name="transactionId"
+    formData={formData}
+    onChange={handleChange}
+  />
+)}
                 <FormField
                   label="Amount (₹) *"
                   name="amount"

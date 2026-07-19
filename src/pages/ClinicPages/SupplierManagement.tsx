@@ -7,7 +7,7 @@ import {
   PlusIcon,
   XMarkIcon,
   CreditCardIcon,
-  ChevronDownIcon,
+  // ChevronDownIcon,
 } from "@heroicons/react/24/outline";
 
 interface PurchaseLog {

@@ -43,6 +43,7 @@ interface PatientBooking {
   };
   paymentStatus?: "paid" | "unpaid" | "pending";
   paymentMethod?: string;
+  paymentDate?: string;
   transactionId?: string;
 }
 
@@ -388,13 +389,13 @@ const Patients: React.FC = memo(() => {
     });
   }, [patients, workflowTab, debouncedSearch, dateFrom, dateTo, statusFilter]);
 
-  const statusCounts = useMemo(() => {
-    return patients.reduce((acc, p) => {
-      const s = p.status?.toLowerCase() || "pending";
-      acc[s] = (acc[s] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-  }, [patients]);
+  // const statusCounts = useMemo(() => {
+  //   return patients.reduce((acc, p) => {
+  //     const s = p.status?.toLowerCase() || "pending";
+  //     acc[s] = (acc[s] || 0) + 1;
+  //     return acc;
+  //   }, {} as Record<string, number>);
+  // }, [patients]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   useEffect(() => {

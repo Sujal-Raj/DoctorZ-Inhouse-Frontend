@@ -9,13 +9,13 @@ import {
   ShieldCheckIcon,
   PowerIcon,
   PlusIcon,
-  CreditCardIcon,
+  // CreditCardIcon,
   ClipboardDocumentListIcon,
-  ArrowsRightLeftIcon,
+  // ArrowsRightLeftIcon,
   XMarkIcon,
   CheckCircleIcon,
   ExclamationCircleIcon,
-  TvIcon,
+  // TvIcon,
 } from "@heroicons/react/24/outline";
 
 // Interfaces
