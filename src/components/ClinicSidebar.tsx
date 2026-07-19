@@ -48,10 +48,14 @@ const ClinicSidebar: React.FC = () => {
     if (["ward-management", "ipd-admissions"].includes(path)) requiredFeature = "ipd";
     if (["inventory-management", "supplier-management", "asset-management"].includes(path)) requiredFeature = "inventory";
     if (["communication-hub"].includes(path)) requiredFeature = "communication";
+    if (["audit-logs"].includes(path)) requiredFeature = "Audit Logs";
+    if (["referrals", "referral-analytics"].includes(path)) requiredFeature = "Referrals";
 
     // If a required SaaS feature is not enabled for this clinic, block it for EVERYONE
-    if (requiredFeature && !isFeatureEnabled(requiredFeature)) {
-      return false;
+    if (requiredFeature) {
+      // For uppercase DB strings (like Audit Logs), let's make it case-insensitive or exact
+      const hasFeature = clinicFeatures.some(f => f.toLowerCase() === requiredFeature.toLowerCase());
+      if (!hasFeature) return false;
     }
 
     // Default dashboard and profile should always be visible
@@ -62,7 +66,7 @@ const ClinicSidebar: React.FC = () => {
 
     // Role-based baseline access
     if (userRole === "Receptionist") {
-      const allowed = ["clinic-home-dashboard", "clinic-profile", "all-clinic-doctors", "all-clinic-patients", "ward-management", "ipd-admissions", "communication-hub"];
+      const allowed = ["clinic-home-dashboard", "clinic-profile", "referrals", "referral-analytics", "all-clinic-doctors", "all-clinic-patients", "ward-management", "ipd-admissions", "communication-hub"];
       if (allowed.includes(path)) return true;
     }
     if (userRole === "Cashier" || userRole === "Accountant") {
@@ -114,6 +118,21 @@ const ClinicSidebar: React.FC = () => {
       name: "Patients",
       path: "all-clinic-patients",
       icon: <Users className="w-5 h-5" />,
+    },
+    {
+      name: "Referral Network",
+      path: "referrals",
+      icon: <Network className="w-5 h-5" />,
+    },
+    {
+      name: "Referral Analytics",
+      path: "referral-analytics",
+      icon: <TrendingUp className="w-5 h-5" />,
+    },
+    {
+      name: "Audit Logs",
+      path: "audit-logs",
+      icon: <Network className="w-5 h-5" />, // Or Shield
     },
     {
       name: "Inventory",

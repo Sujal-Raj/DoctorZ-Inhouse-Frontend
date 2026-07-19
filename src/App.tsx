@@ -58,6 +58,11 @@ import InvoiceCreator from './pages/ClinicPages/InvoiceCreator';
 import AssetManagement from './pages/ClinicPages/AssetManagement';
 import SupplierManagement from './pages/ClinicPages/SupplierManagement';
 import CommunicationHub from './pages/ClinicPages/CommunicationHub';
+import AuditLogsDashboard from './pages/ClinicPages/AuditLogsDashboard';
+import ReferralManagement from './pages/ClinicPages/ReferralManagement';
+import LabOrders from './pages/LabPages/LabOrders';
+import ReferralAnalytics from './pages/ClinicPages/ReferralAnalytics';
+import VerifyReport from './pages/PublicPages/VerifyReport';
 
 function App() {
 
@@ -79,6 +84,7 @@ function App() {
           <Route element={<Layout />}/>
 
       <Route path='/' element={<HomeLandingPage/>}/>
+      <Route path="/verify/report/:id" element={<VerifyReport />} />
                   <Route path="/patient-register" element={<RegisterPatient />} />
             <Route path="/doctor-register" element={<RegisterDoctor />} />
             <Route path="/clinic-register" element={<RegisterClinic />} />
@@ -130,10 +136,13 @@ function App() {
             />
             <Route path="patients" element={<Patients />} />
             <Route path="tests" element={<LabTests />} />
+            <Route path="orders" element={<LabOrders />} />
             <Route path="profile" element={<LabProfile />} />
             <Route path="inventory" element={<LabInventory />} />
             <Route path="expenses" element={<LabExpenses />} />
             <Route path="revenue" element={<LabRevenue />} />
+            <Route path="referrals" element={<ReferralManagement />} />
+            <Route path="audit-logs" element={<AuditLogsDashboard />} />
           </Route>
 
           <Route
@@ -147,6 +156,9 @@ function App() {
             />
 
             <Route path="clinic-profile" element={<ClinicProfile />} />
+            <Route path="referrals" element={<ReferralManagement />} />
+            <Route path="referral-analytics" element={<ReferralAnalytics />} />
+            <Route path="audit-logs" element={<AuditLogsDashboard />} />
             <Route path="add-doctor" element={<AddDoctor />} />
             <Route path="all-clinic-doctors" element={<ClinicDoctors />} />
             <Route path="all-clinic-patients" element={<AllClinicPatients />} />

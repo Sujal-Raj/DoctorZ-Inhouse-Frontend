@@ -30,14 +30,30 @@ export default function LabDashboard() {
     navigate("/lab-login");
   };
 
-  const menuItems = [
+  const labFeaturesStr = localStorage.getItem("labFeatures");
+  const labFeatures = labFeaturesStr ? JSON.parse(labFeaturesStr) : ["referrals"];
+
+  const isFeatureEnabled = (featureName: string) => {
+    return labFeatures.some((f: string) => f.toLowerCase() === featureName.toLowerCase());
+  };
+
+  const allMenuItems = [
     { name: "Patients", path: "patients", icon: Users },
     { name: "Lab Tests", path: "tests", icon: FlaskConical },
+    { name: "Lab Orders", path: "orders", icon: Archive },
     { name: "Inventory", path: "inventory", icon: Archive },
     { name: "Expenses", path: "expenses", icon: Receipt },
     { name: "Revenue", path: "revenue", icon: IndianRupee },
     { name: "Profile", path: "profile", icon: UserCircle },
+    // Gated Features
+    { name: "Referrals", path: "referrals", icon: Users, feature: "Referrals" },
+    { name: "Audit Logs", path: "audit-logs", icon: Archive, feature: "Audit Logs" },
   ];
+
+  const menuItems = allMenuItems.filter(item => {
+    if (!item.feature) return true;
+    return isFeatureEnabled(item.feature);
+  });
 
   return (
     <div className="flex h-screen bg-gray-50">
