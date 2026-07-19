@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../Services/mainApi";
-import toast from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 import {
   BuildingOfficeIcon,
   UserGroupIcon,
@@ -286,7 +286,7 @@ export default function SuperAdminDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans flex flex-col">
-      
+      <Toaster position="top-right" toastOptions={{ duration: 1000 }} />
       
       {/* Platform Header */}
       <header className="bg-slate-900 border-b border-slate-800 px-6 py-4 flex items-center justify-between shadow-xl">
