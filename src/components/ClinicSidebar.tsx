@@ -34,11 +34,11 @@ const ClinicSidebar: React.FC = () => {
   const clinicFeaturesStr = localStorage.getItem("clinicFeatures");
   const clinicFeatures: string[] = clinicFeaturesStr ? JSON.parse(clinicFeaturesStr) : ["opd", "emr", "patients"]; // Default to basic if missing
 
-  const isFeatureEnabled = (featureName: string) => {
-    // If it's a basic feature, always return true, otherwise check clinicFeatures array
-    if (["opd", "emr", "patients"].includes(featureName)) return true;
-    return clinicFeatures.includes(featureName);
-  };
+  // const isFeatureEnabled = (featureName: string) => {
+  //   // If it's a basic feature, always return true, otherwise check clinicFeatures array
+  //   if (["opd", "emr", "patients"].includes(featureName)) return true;
+  //   return clinicFeatures.includes(featureName);
+  // };
 
   const isAllowed = (path: string) => {
     // Determine the required SaaS feature for the path
