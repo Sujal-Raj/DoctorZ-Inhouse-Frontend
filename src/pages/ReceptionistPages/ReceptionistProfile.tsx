@@ -87,14 +87,14 @@ console.log(res.data);
 
   if (error) {
     return (
-      <div className="max-w-2xl mx-auto mt-6 p-3 rounded-lg bg-red-50 text-red-600 text-sm">
+      <div className="w-full mt-6 p-3 rounded-lg bg-red-50 text-red-600 text-sm">
         {error}
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
+    <div className="w-full space-y-5">
       {/* Header */}
       <div>
         <h1 className="text-xl md:text-2xl font-semibold text-gray-900">

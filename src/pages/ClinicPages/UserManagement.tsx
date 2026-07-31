@@ -219,7 +219,7 @@ if (permissions.length === 0) {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto font-sans">
+    <div className="p-6 space-y-6 w-full font-sans">
       
 
       {/* Header */}

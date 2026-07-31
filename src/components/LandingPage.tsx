@@ -1,88 +1,17 @@
-import { useState, useRef, useEffect, type ReactNode } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, Stethoscope, Hospital, FlaskConical, User } from "lucide-react";
+import { Stethoscope, Hospital, FlaskConical } from "lucide-react";
 import Navbar from "../components/Navbar";
+import Cookies from "js-cookie";
+import api from "../Services/mainApi";
+import { loginDoctor } from "../Services/doctorApi";
+import { loginLab } from "../Services/labApi";
 
-type RoleOption = {
-  label: string;
-  path: string;
-  icon: ReactNode;
-};
-
-type RoleDropdownProps = {
-  label: string;
-  options: RoleOption[];
-  variant: "primary" | "secondary";
-};
-
-const loginOptions: RoleOption[] = [
-  { label: "Doctor", path: "/doctor-login", icon: <Stethoscope size={15} /> },
-  { label: "Clinic / Hospital", path: "/clinic-login", icon: <Hospital size={15} /> },
-  { label: "Lab", path: "/lab-login", icon: <FlaskConical size={15} /> },
-  { label: "Clinic/Hospital Staff", path: "/receptionist-login", icon: <User size={15} /> },
+const registerOptions = [
+  { label: "Doctor", path: "/doctor-register", icon: <Stethoscope size={16} /> },
+  { label: "Clinic / Hospital", path: "/clinic-register", icon: <Hospital size={16} /> },
+  { label: "Lab", path: "/lab-register", icon: <FlaskConical size={16} /> },
 ];
-
-const registerOptions: RoleOption[] = [
-  { label: "Doctor", path: "/doctor-register", icon: <Stethoscope size={15} /> },
-  { label: "Clinic / Hospital", path: "/clinic-register", icon: <Hospital size={15} /> },
-  { label: "Lab", path: "/lab-register", icon: <FlaskConical size={15} /> },
-];
-
-function RoleDropdown({ label, options, variant }: RoleDropdownProps) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement | null>(null);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const handler = (e: MouseEvent | TouchEvent) => {
-      if (!ref.current || !(e.target instanceof Node)) return;
-      if (!ref.current.contains(e.target)) setOpen(false);
-    };
-
-    document.addEventListener("mousedown", handler);
-    document.addEventListener("touchstart", handler);
-    return () => {
-      document.removeEventListener("mousedown", handler);
-      document.removeEventListener("touchstart", handler);
-    };
-  }, []);
-
-  const isPrimary = variant === "primary";
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen(!open)}
-        className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-sm font-normal transition-all duration-200 cursor-pointer ${
-          isPrimary
-            ? "bg-[#0c213e] text-white hover:bg-[#162d52]"
-            : "bg-white text-slate-700 border border-gray-200 hover:bg-gray-50 hover:border-gray-300"
-        }`}
-      >
-        <span>{label}</span>
-        <ChevronDown
-          size={16}
-          className={`transition-transform duration-200 opacity-60 ${open ? "rotate-180" : ""}`}
-        />
-      </button>
-
-      {open && (
-        <div className="absolute top-[calc(100%+6px)] left-0 right-0 bg-white border border-gray-200 rounded-2xl shadow-[0_8px_32px_rgba(12,33,62,0.10),0_2px_8px_rgba(12,33,62,0.06)] overflow-hidden z-20 animate-in fade-in slide-in-from-top-1 duration-150">
-          {options.map((opt: RoleOption) => (
-            <button
-              key={opt.path}
-              onClick={() => { navigate(opt.path); setOpen(false); }}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-600 text-left border-b border-gray-50 last:border-0 hover:bg-blue-50 hover:text-blue-700 transition-colors duration-100 cursor-pointer"
-            >
-              <span className="text-gray-400 group-hover:text-blue-500">{opt.icon}</span>
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function ParticleCanvas() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -161,6 +90,168 @@ function ParticleCanvas() {
 }
 
 export default function HomeLandingPage() {
+  const navigate = useNavigate();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+
+  const handleUnifiedLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+    setSuccessMsg("");
+    setLoading(true);
+
+    const id = username.trim();
+    const pwd = password;
+
+    try {
+      // 1. Detect Doctor by DOC- prefix
+      if (id.toUpperCase().startsWith("DOC-")) {
+        const res = await loginDoctor(id, pwd);
+        Cookies.set("doctorToken", res.token, { expires: 7 });
+        localStorage.setItem("doctorId", res.doctor._id);
+        setSuccessMsg(`Welcome Dr. ${res.doctor.fullName}! Redirecting...`);
+        setTimeout(() => navigate(`/doctordashboard/${res.doctor._id}`), 1200);
+        return;
+      }
+
+      // 2. Detect Clinic Owner / Super Admin or Staff by CLI- or STAFF- prefix
+      if (id.toUpperCase().startsWith("CLI-") || id.toUpperCase().startsWith("STAFF-")) {
+        try {
+          // Attempt Clinic Admin Owner login first
+          const res = await api.post("/api/clinic/clinicLogin", { staffId: id, staffPassword: pwd });
+          if (res.status === 200 || res.data?.jwtToken) {
+            localStorage.setItem("clinicToken", res.data.jwtToken);
+            localStorage.setItem("authTokenClinic", res.data.jwtToken);
+            localStorage.setItem("clinicId", res.data.clinic.id);
+            localStorage.setItem("userRole", "Admin");
+            localStorage.setItem("userPermissions", JSON.stringify(["all"]));
+            localStorage.setItem("clinicFeatures", JSON.stringify(res.data.clinic.allowedFeatures || []));
+            setSuccessMsg(`Welcome ${res.data.clinic.staffName}! Redirecting...`);
+            setTimeout(() => navigate(`/clinicDashboard/${res.data.clinic.id}`), 1200);
+            return;
+          }
+        } catch (e) {
+          // If Clinic Owner login fails, fall through to try regular Staff login
+        }
+
+        // Attempt Clinic Staff Login
+        const res = await api.post("/api/staff/login", { staffId: id, password: pwd });
+        localStorage.setItem("clinicToken", res.data.token);
+        localStorage.setItem("authTokenClinic", res.data.token);
+        localStorage.setItem("clinicId", res.data.staff.clinicId);
+        localStorage.setItem("userRole", res.data.staff.role);
+        localStorage.setItem("userPermissions", JSON.stringify(res.data.staff.permissions));
+        localStorage.setItem("clinicFeatures", JSON.stringify(res.data.staff.allowedFeatures || []));
+        setSuccessMsg(`Welcome ${res.data.staff.fullName}! Redirecting...`);
+        setTimeout(() => navigate(`/clinicDashboard/${res.data.staff.clinicId}`), 1200);
+        return;
+      }
+
+      // 3. Detect Lab by LAB- prefix
+      if (id.toUpperCase().startsWith("LAB-")) {
+        const response = await loginLab(id, pwd);
+        if (response.status === 200 && response.data?.token) {
+          localStorage.setItem("token", response.data.token);
+          localStorage.setItem("labId", response.data.lab._id);
+          localStorage.setItem("labName", response.data.lab.name);
+          setSuccessMsg(`Welcome ${response.data.lab.name}! Redirecting...`);
+          setTimeout(() => navigate("/lab-dashboard/patients"), 1200);
+          return;
+        } else {
+          throw new Error("Invalid Lab credentials");
+        }
+      }
+
+      // 4. Detect Receptionist by REC- prefix
+      if (id.toUpperCase().startsWith("REC-")) {
+        const res = await api.post("/api/receptionist/login", { receptionId: id, password: pwd });
+        localStorage.setItem("receptionistToken", res.data.token);
+        localStorage.setItem("authTokenReceptionist", res.data.token);
+        localStorage.setItem("receptionistId", res.data.receptionist.id);
+        localStorage.setItem("receptionistName", res.data.receptionist.name);
+        setSuccessMsg(`Welcome ${res.data.receptionist.name}! Redirecting...`);
+        setTimeout(() => navigate("/receptionistdashboard"), 1200);
+        return;
+      }
+
+      // 5. Fallback/Waterfall if it is an Email or doesn't have standard prefixes
+      
+      // Try Super Admin Login
+      try {
+        const res = await api.post("/api/admin/login", { email: id, password: pwd });
+        if (res.data.success) {
+          localStorage.setItem("superadminToken", res.data.token);
+          localStorage.setItem("userRole", "superadmin");
+          setSuccessMsg("Welcome Super Admin! Redirecting...");
+          setTimeout(() => navigate("/super-admin-dashboard"), 1200);
+          return;
+        }
+      } catch (e) {
+        // Ignore and try patient
+      }
+
+      // Try Patient Login
+      try {
+        const res = await api.post("/api/patient/login", { email: id, password: pwd });
+        if (res.status === 200 || res.data?.token) {
+          Cookies.set("patientToken", res.data.token || res.data.jwtToken, { expires: 7 });
+          localStorage.setItem("patientId", res.data.patient._id);
+          setSuccessMsg(`Welcome ${res.data.patient.fullName}! Redirecting...`);
+          setTimeout(() => navigate("/"), 1200);
+          return;
+        }
+      } catch (e) {
+        // Ignore and try general staff login
+      }
+
+      // Try Staff Login
+      try {
+        const res = await api.post("/api/staff/login", { staffId: id, password: pwd });
+        if (res.data.success) {
+          localStorage.setItem("clinicToken", res.data.token);
+          localStorage.setItem("authTokenClinic", res.data.token);
+          localStorage.setItem("clinicId", res.data.staff.clinicId);
+          localStorage.setItem("userRole", res.data.staff.role);
+          localStorage.setItem("userPermissions", JSON.stringify(res.data.staff.permissions));
+          localStorage.setItem("clinicFeatures", JSON.stringify(res.data.staff.allowedFeatures || []));
+          setSuccessMsg(`Welcome ${res.data.staff.fullName}! Redirecting...`);
+          setTimeout(() => navigate(`/clinicDashboard/${res.data.staff.clinicId}`), 1200);
+          return;
+        }
+      } catch (e) {
+        // Ignore and try clinic login
+      }
+
+      // Try Clinic Login
+      try {
+        const res = await api.post("/api/clinic/clinicLogin", { staffId: id, staffPassword: pwd });
+        if (res.status === 200 || res.data?.jwtToken) {
+          localStorage.setItem("clinicToken", res.data.jwtToken);
+          localStorage.setItem("authTokenClinic", res.data.jwtToken);
+          localStorage.setItem("clinicId", res.data.clinic.id);
+          localStorage.setItem("userRole", "Admin");
+          localStorage.setItem("userPermissions", JSON.stringify(["all"]));
+          localStorage.setItem("clinicFeatures", JSON.stringify(res.data.clinic.allowedFeatures || []));
+          setSuccessMsg(`Welcome ${res.data.clinic.staffName}! Redirecting...`);
+          setTimeout(() => navigate(`/clinicDashboard/${res.data.clinic.id}`), 1200);
+          return;
+        }
+      } catch (e) {
+        // Ignore
+      }
+
+      throw new Error("Invalid credentials or account is suspended.");
+    } catch (err: any) {
+      console.error("Unified Login error:", err);
+      setErrorMsg(err.response?.data?.message || err.message || "Invalid ID/Email or Password.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-[#f9f9f7]">
       <Navbar />
@@ -216,23 +307,87 @@ export default function HomeLandingPage() {
           <div className="w-full max-w-85">
             <p className="text-[11px] font-medium tracking-[0.14em] text-blue-500 uppercase mb-2">Healthcare Portal</p>
             <h2 className="font-serif text-[30px] text-[#0c213e] leading-tight mb-1">Welcome back</h2>
-            <p className="text-[13.5px] text-gray-400 mb-7">Select your role to continue to your dashboard.</p>
+            <p className="text-[13.5px] text-gray-400 mb-6">Enter your credentials to continue to your dashboard.</p>
 
-            <p className="text-[10.5px] font-medium tracking-[0.12em] text-gray-400 uppercase mb-2">Sign in as</p>
-            <RoleDropdown label="Login as" options={loginOptions} variant="primary" />
+            {/* ❌ Error Message */}
+            {errorMsg && (
+              <p className="mb-4 text-red-650 text-[12px] font-semibold bg-red-50 p-2.5 rounded-xl border border-red-100 animate-in fade-in duration-200">
+                {errorMsg}
+              </p>
+            )}
 
-            <div className="flex items-center gap-2.5 my-5">
+            {/*  Success Message */}
+            {successMsg && (
+              <p className="mb-4 text-emerald-600 text-[12px] font-semibold bg-emerald-50 p-2.5 rounded-xl border border-emerald-100 animate-in fade-in duration-200">
+                {successMsg}
+              </p>
+            )}
+
+            <form onSubmit={handleUnifiedLogin} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                  User ID / Email
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. DOC-1234, CLI-5678, or email"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0c213e]/10 focus:border-[#0c213e] bg-white text-sm transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0c213e]/10 focus:border-[#0c213e] bg-white text-sm transition-all"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3.5 bg-[#0c213e] text-white rounded-xl font-semibold text-sm hover:bg-[#162d52] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-[#0c213e]/10 disabled:opacity-50"
+              >
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  "Login to Dashboard"
+                )}
+              </button>
+            </form>
+
+            <div className="flex items-center gap-2.5 my-6">
               <div className="flex-1 h-px bg-gray-200" />
-              <span className="text-[11px] text-gray-300">or</span>
+              <span className="text-[11px] text-gray-400">or register new account</span>
               <div className="flex-1 h-px bg-gray-200" />
             </div>
 
-            <p className="text-[10.5px] font-medium tracking-[0.12em] text-gray-400 uppercase mb-2">New here?</p>
-            <RoleDropdown label="Register as" options={registerOptions} variant="secondary" />
+            <p className="text-[10.5px] font-bold uppercase tracking-wider text-[#0c213e]/70 mb-3">Register as</p>
+            <div className="grid grid-cols-3 gap-2">
+              {registerOptions.map((opt) => (
+                <button
+                  key={opt.path}
+                  onClick={() => navigate(opt.path)}
+                  className="flex flex-col items-center justify-center p-3 bg-white border border-gray-200 rounded-2xl hover:border-[#0c213e] hover:text-[#0c213e] hover:shadow-xs transition-all duration-200 cursor-pointer text-center group"
+                >
+                  <span className="text-gray-450 group-hover:text-[#0c213e] mb-1.5 transition-colors">{opt.icon}</span>
+                  <span className="text-[10.5px] font-semibold leading-tight text-gray-600 group-hover:text-[#0c213e] transition-colors">{opt.label}</span>
+                </button>
+              ))}
+            </div>
 
-            <div className="mt-7 pt-5 border-t border-gray-100 flex items-center gap-2">
+            <div className="mt-8 pt-5 border-t border-gray-100 flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-              <span className="text-[12px] text-gray-400">All systems operational · 256-bit encrypted</span>
+              <span className="text-[11px] text-gray-400">All systems operational · Encrypted connection</span>
             </div>
           </div>
         </div>

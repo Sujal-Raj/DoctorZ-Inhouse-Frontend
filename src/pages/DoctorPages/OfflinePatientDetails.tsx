@@ -279,7 +279,7 @@ useEffect(() => {
 
   return (
     <main className="min-h-screen bg-gray-50 py-6">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full px-4 sm:px-6 lg:px-8">
         <button
           onClick={() => navigate(-1)}
           className="mb-5 inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"

@@ -148,7 +148,7 @@ const DoctorProfile: React.FC = () => {
         <title>Dr. {doctor?.fullName} | Profile</title>
       </Helmet>
 
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full">
         {/* Header Card */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
           <div className="flex flex-col md:flex-row items-center md:items-start gap-6">

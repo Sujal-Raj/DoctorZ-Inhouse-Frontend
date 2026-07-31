@@ -280,7 +280,7 @@ export default function LabInventory() {
       </Helmet>
 
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 lg:p-8">
-        <div className="max-w-7xl mx-auto space-y-6">
+        <div className="w-full space-y-6">
 
           {/* Header */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">

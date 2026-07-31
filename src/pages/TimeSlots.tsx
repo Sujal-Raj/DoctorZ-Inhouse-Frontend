@@ -426,7 +426,7 @@ const TimeSlots = () => {
       `}</style>
 
       <div className="min-h-screen bg-slate-50 font-sans">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-10">
 
           {/* ── PAGE HEADER ──────────────────────────────────────────────── */}
           <div className="mb-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">

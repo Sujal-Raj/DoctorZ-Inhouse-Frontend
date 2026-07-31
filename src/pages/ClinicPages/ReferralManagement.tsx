@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import api from "../../Services/mainApi";
 import { toast } from "react-toastify";
@@ -12,6 +12,7 @@ interface Referral {
   referredByDoctorId: any;
   referredByHospitalId?: any;
   referredToDoctorId: any;
+  // referredByHospitalId?: any;
   referredToHospitalId: any;
   referredToLabId: any;
   externalHospitalName?: string;

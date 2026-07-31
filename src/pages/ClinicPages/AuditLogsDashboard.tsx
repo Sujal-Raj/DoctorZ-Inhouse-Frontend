@@ -56,7 +56,7 @@ export default function AuditLogsDashboard() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto min-h-screen pb-20 pt-16 hide-on-print print-container">
+    <div className="p-6 w-full min-h-screen pb-20 pt-16 hide-on-print print-container">
       <div className="flex justify-between items-center mb-6 no-print">
         <h1 className="text-3xl font-bold text-gray-800">Audit Logs (Enterprise)</h1>
         <div className="flex space-x-4">

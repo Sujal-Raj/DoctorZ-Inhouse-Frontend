@@ -129,7 +129,7 @@ const LabProfile = () => {
       </Helmet>
 
       <div className="min-h-[calc(100vh-80px)] bg-gray-50">
-        <div className="mx-auto max-w-5xl space-y-6">
+        <div className="w-full space-y-6">
           {/* Top header card matching dashboard theme */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 md:p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex items-center gap-4">

@@ -5,6 +5,21 @@ import { Eye, EyeOff, Upload, FileText } from "lucide-react";
 import { registerClinic, getPlans } from "../../Services/mainClinicApi";
 import { toast } from "react-hot-toast";
 
+const specialitiesList = [
+  "Cardiology",
+  "Pediatrics",
+  "Dermatology",
+  "Orthopedics",
+  "Gynecology",
+  "Ophthalmology",
+  "Neurology",
+  "General Medicine",
+  "Dental",
+  "Psychiatry",
+  "Oncology",
+  "Urology"
+];
+
 type ClinicFormInputs = {
   clinicName: string;
   clinicType: string;
@@ -12,6 +27,7 @@ type ClinicFormInputs = {
   address: string;
   state: string;
   district: string;
+  city: string;
   pincode: string;
   contact: string;
   email: string;
@@ -19,6 +35,7 @@ type ClinicFormInputs = {
   licenseNo: string;
   ownerAadhar: string;
   ownerPan: string;
+  hprId?: string;
   staffName: string;
   staffEmail: string;
   staffPassword: string;
@@ -41,6 +58,9 @@ const RegisterClinic: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+
+  // Specialities tags state
+  const [specialityTags, setSpecialityTags] = useState<string[]>([]);
 
   const [currentStep, setCurrentStep] = useState(() => {
     const savedStep = localStorage.getItem("clinicFormStep");
@@ -70,15 +90,15 @@ const RegisterClinic: React.FC = () => {
       Object.keys(parsedData).forEach((key) => {
         setValue(key as keyof ClinicFormInputs, parsedData[key]);
       });
-    }
 
-    const savedCert = localStorage.getItem("clinicCertFile");
-    if (savedCert) {
-      try {
-        const parsedCert = JSON.parse(savedCert);
-        setCertFile(parsedCert);
-      } catch {
-        // Ignore invalid cert data
+      // Initialize specialities tags
+      if (parsedData.specialities) {
+        setSpecialityTags(
+          parsedData.specialities
+            .split(",")
+            .map((s: string) => s.trim())
+            .filter(Boolean)
+        );
       }
     }
   }, [setValue]);
@@ -99,15 +119,15 @@ const RegisterClinic: React.FC = () => {
 
   // Define fields for each step (required fields only)
   const step1Fields: (keyof ClinicFormInputs)[] = [
-    "clinicName", "clinicType"
+    "clinicName", "clinicType", "specialities"
   ];
   
   const step2Fields: (keyof ClinicFormInputs)[] = [
-    "address", "state", "district", "pincode", "contact"
+    "address", "state", "district", "city", "pincode", "contact"
   ];
   
   const step3Fields: (keyof ClinicFormInputs)[] = [
-    "email", "operatingHours", "licenseNo", "ownerAadhar", "ownerPan"
+    "email", "operatingHours", "licenseNo", "ownerAadhar", "ownerPan", "hprId"
   ];
   
   const step4Fields: (keyof ClinicFormInputs)[] = [
@@ -125,12 +145,7 @@ const RegisterClinic: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       setCertFile(file);
-      localStorage.setItem("clinicCertFile", JSON.stringify(file));
-      if (file.type.startsWith("image/")) {
-        setCertPreview(URL.createObjectURL(file));
-      } else {
-        setCertPreview(null);
-      }
+      setCertPreview(URL.createObjectURL(file));
     }
   };
 
@@ -280,13 +295,57 @@ const RegisterClinic: React.FC = () => {
         )}
       </div>
 
-      <InputField
-        id="specialities"
-        label="Specialities"
-        placeholder="Cardiology, Pediatrics"
-        registerField={register("specialities")}
-        require={"true"}
-      />
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-1">
+          Specialities <span className="text-red-500"> *</span>
+        </label>
+        <select
+          value=""
+          onChange={(e) => {
+            const val = e.target.value;
+            if (val && !specialityTags.includes(val)) {
+              const newTags = [...specialityTags, val];
+              setSpecialityTags(newTags);
+              setValue("specialities", newTags.join(", "), { shouldValidate: true });
+              saveFormData();
+            }
+          }}
+          className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-gray-800 shadow-sm focus:ring-2 focus:ring-[#0c213e]"
+        >
+          <option value="">Select Speciality</option>
+          {specialitiesList.map((spec, i) => (
+            <option key={i} value={spec}>
+              {spec}
+            </option>
+          ))}
+        </select>
+        <div className="flex flex-wrap gap-1.5 mt-2 min-h-[30px]">
+          {specialityTags.map((tag, idx) => (
+            <span
+              key={idx}
+              className="inline-flex items-center gap-1 bg-[#0c213e]/10 text-[#0c213e] px-2.5 py-1 rounded-full text-xs font-semibold"
+            >
+              {tag}
+              <button
+                type="button"
+                onClick={() => {
+                  const newTags = specialityTags.filter((_, i) => i !== idx);
+                  setSpecialityTags(newTags);
+                  setValue("specialities", newTags.join(", "), { shouldValidate: true });
+                  saveFormData();
+                }}
+                className="hover:text-red-500 font-bold ml-1 text-sm focus:outline-none"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+        <input type="hidden" {...register("specialities", { required: "Specialities are required" })} />
+        {errors.specialities && (
+          <p className="text-red-500 text-xs mt-1">{errors.specialities.message}</p>
+        )}
+      </div>
     </>
   );
 
@@ -298,10 +357,6 @@ const RegisterClinic: React.FC = () => {
         placeholder="123 Street, City"
         registerField={register("address", {
           required: "Address is required",
-          minLength: {
-            value: 10,
-            message: "Address must be at least 10 characters",
-          },
         })}
         error={errors.address?.message}
         require={"true"}
@@ -375,15 +430,31 @@ const RegisterClinic: React.FC = () => {
       />
 
       <InputField
+        id="city"
+        label="City"
+        placeholder="Mumbai"
+        registerField={register("city", {
+          required: "City is required",
+        })}
+        error={errors.city?.message}
+        require={"true"}
+      />
+
+      <InputField
         id="pincode"
         label="Pincode"
         placeholder="400001"
-        type="number"
+        type="text"
         registerField={register("pincode", {
           required: "Pincode is required",
           pattern: {
             value: /^[0-9]{6}$/,
             message: "Pincode must be exactly 6 digits",
+          },
+          onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+            const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+            e.target.value = val;
+            setValue("pincode", val, { shouldValidate: true });
           },
         })}
         error={errors.pincode?.message}
@@ -401,9 +472,9 @@ const RegisterClinic: React.FC = () => {
             message: "Contact number must be exactly 10 digits",
           },
           onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
-            e.target.value = e.target.value
-              .replace(/\D/g, "")
-              .slice(0, 10);
+            const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+            e.target.value = val;
+            setValue("contact", val, { shouldValidate: true });
           },
         })}
         error={errors.contact?.message}
@@ -468,9 +539,9 @@ const RegisterClinic: React.FC = () => {
             message: "Aadhar must be exactly 12 digits",
           },
           onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
-            e.target.value = e.target.value
-              .replace(/\D/g, "")
-              .slice(0, 12);
+            const val = e.target.value.replace(/\D/g, "").slice(0, 12);
+            e.target.value = val;
+            setValue("ownerAadhar", val, { shouldValidate: true });
           },
         })}
         error={errors.ownerAadhar?.message}
@@ -487,10 +558,38 @@ const RegisterClinic: React.FC = () => {
             value: /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/,
             message: "Enter valid PAN (ABCDE1234F)",
           },
+          onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+            const val = e.target.value.toUpperCase().slice(0, 10);
+            e.target.value = val;
+            setValue("ownerPan", val, { shouldValidate: true });
+          },
         })}
         error={errors.ownerPan?.message}
         require={"true"}
       />
+
+      {/* HPR ID Optional Field for Clinic */}
+      <div className="md:col-span-2 mt-4 pt-4 border-t border-gray-200">
+        <label htmlFor="hprId" className="block text-sm font-semibold text-gray-700 mb-1">
+          HPR ID (Optional)
+        </label>
+        <p className="text-xs text-gray-500 mb-2">
+          Healthcare Provider ID (e.g. 12-3456-7890-1234 or username@hpr)
+        </p>
+        <input
+          id="hprId"
+          type="text"
+          placeholder="12-3456-7890-1234"
+          {...register("hprId")}
+          onBlur={saveFormData}
+          className="w-full md:w-1/2 rounded-lg border border-gray-300 bg-white p-2.5 text-gray-800 shadow-sm focus:ring-2 focus:ring-[#0c213e] focus:border-[#0c213e] transition-all"
+        />
+        {errors.hprId && (
+          <p className="text-red-500 text-xs mt-1">
+            {errors.hprId.message}
+          </p>
+        )}
+      </div>
     </>
   );
 
@@ -587,7 +686,17 @@ const RegisterClinic: React.FC = () => {
 
           {certFile && (
             <div className="border border-[#0c213e]/30 rounded-lg p-2 bg-gray-50 shadow-sm flex items-center justify-center w-28 h-28">
-              {certPreview ? (
+              {certFile.type === "application/pdf" || certFile.name.toLowerCase().endsWith(".pdf") ? (
+                <div className="flex flex-col items-center justify-center text-red-500 text-xs text-center w-full h-full">
+                  <FileText size={32} className="text-red-500 mb-1" />
+                  <span className="font-semibold text-gray-700 truncate max-w-full px-1 text-[10px]">{certFile.name}</span>
+                  {certPreview && (
+                    <a href={certPreview} target="_blank" rel="noreferrer" className="text-blue-600 underline mt-1 font-medium hover:text-blue-800 text-[10px]">
+                      View PDF
+                    </a>
+                  )}
+                </div>
+              ) : certPreview ? (
                 <img
                   src={certPreview}
                   alt="Preview"
