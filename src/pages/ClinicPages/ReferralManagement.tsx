@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { useParams, useOutletContext } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import api from "../../Services/mainApi";
 import { toast } from "react-toastify";
 import { PlusIcon, UserGroupIcon, BuildingOffice2Icon, HeartIcon } from "@heroicons/react/24/outline";
@@ -11,6 +11,7 @@ interface Referral {
   patientId: any;
   referredByDoctorId: any;
   referredToDoctorId: any;
+  referredByHospitalId?: any;
   referredToHospitalId: any;
   referredToLabId: any;
   externalHospitalName?: string;

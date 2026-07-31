@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import api from "../../Services/mainApi";
+import { toast } from "react-toastify";
 import { CheckBadgeIcon, ExclamationTriangleIcon, ArrowDownTrayIcon, ShareIcon } from "@heroicons/react/24/outline";
 
 interface VerifiedReport {

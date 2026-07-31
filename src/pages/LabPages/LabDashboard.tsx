@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { FlaskConical, Users, UserCircle, LogOut, Menu, X, Archive, Receipt, IndianRupee } from "lucide-react";
+import { FlaskConical, Users, UserCircle, LogOut, Menu, X, Archive, Receipt, IndianRupee, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useEffect } from "react";
 
 export default function LabDashboard() {
@@ -9,6 +9,10 @@ export default function LabDashboard() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
+    const saved = localStorage.getItem("lab_sidebar_collapsed");
+    return saved !== "false";
+  });
 
   // Resize handling
   useEffect(() => {
@@ -27,7 +31,7 @@ export default function LabDashboard() {
     localStorage.removeItem("token");
     localStorage.removeItem("labId");
     localStorage.clear();
-    navigate("/lab-login");
+    navigate("/");
   };
 
   const labFeaturesStr = localStorage.getItem("labFeatures");
@@ -54,6 +58,8 @@ export default function LabDashboard() {
     if (!item.feature) return true;
     return isFeatureEnabled(item.feature);
   });
+
+  const sidebarWidth = isDesktop ? (isCollapsed ? "w-20" : "w-72") : "w-72";
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -89,7 +95,7 @@ export default function LabDashboard() {
           fixed md:relative 
           left-0
           z-40 
-          w-72 h-[calc(100vh-57px)] md:h-full
+          ${sidebarWidth} h-[calc(100vh-57px)] md:h-full
           transform transition-all duration-300 ease-in-out
           top-[57px] md:top-0
           flex flex-col
@@ -97,18 +103,20 @@ export default function LabDashboard() {
         `}
       >
         {/* Logo Section - Desktop Only */}
-        <div className="hidden md:flex items-center gap-3 px-6 py-5 border-b border-gray-200">
-          <div className="w-10 h-10 bg-[#0c213e] rounded-xl flex items-center justify-center shadow-md">
+        <div className={`hidden md:flex items-center border-b border-gray-200 py-5 ${isCollapsed ? "justify-center px-4" : "gap-3 px-6"}`}>
+          <div className="w-10 h-10 bg-[#0c213e] rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
             <FlaskConical className="w-5 h-5 text-white" />
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-gray-900 ">DoctorZ</h2>
-            <p className="text-xs text-gray-700">Lab Dashboard</p>
-          </div>
+          {!isCollapsed && (
+            <div className="overflow-hidden transition-all duration-300">
+              <h2 className="text-lg font-bold text-gray-900 ">DoctorZ</h2>
+              <p className="text-xs text-gray-700">Lab Dashboard</p>
+            </div>
+          )}
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-6 overflow-y-auto">
+        <nav className="flex-1 px-4 py-6 overflow-y-auto no-scrollbar">
           <div className="space-y-1">
             {menuItems.map((item) => {
               const isActive = location.pathname.includes(item.path);
@@ -120,7 +128,12 @@ export default function LabDashboard() {
                   to={`/lab-dashboard/${item.path}`}
                   onClick={() => !isDesktop && setSidebarOpen(false)}
                   className={`
-                    flex items-center gap-3 px-4 py-3 rounded-xl transition-all relative group
+                    flex transition-all relative group cursor-pointer
+                    ${
+                      isCollapsed 
+                        ? "flex-col items-center justify-center p-2 rounded-xl gap-1 text-center" 
+                        : "flex-row items-center gap-3 px-4 py-3 rounded-xl"
+                    }
                     ${
                       isActive
                         ? "bg-[#0c213e] text-white shadow-lg shadow-[#0c213e]/20"
@@ -128,10 +141,19 @@ export default function LabDashboard() {
                     }
                   `}
                 >
-                  <Icon className={`w-5 h-5 ${isActive ? "text-white" : "text-gray-600"}`} />
-                  <span className="font-medium">{item.name}</span>
+                  <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? "text-white" : "text-gray-650"}`} />
+                  
+                  {!isCollapsed ? (
+                    <span className="font-medium text-sm whitespace-nowrap opacity-100 transition-opacity duration-200">
+                      {item.name}
+                    </span>
+                  ) : (
+                    <span className={`text-[9px] font-semibold tracking-tight w-full truncate max-w-[68px] ${isActive ? "text-blue-100" : "text-gray-500"}`}>
+                      {item.name}
+                    </span>
+                  )}
 
-                  {isActive && (
+                  {isActive && !isCollapsed && (
                     <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full"></div>
                   )}
                 </Link>
@@ -140,14 +162,47 @@ export default function LabDashboard() {
           </div>
         </nav>
 
+        {/* Toggle Button for Desktop */}
+        {isDesktop && (
+          <div className="p-4 border-t border-gray-200">
+            <button
+              onClick={() => {
+                const newState = !isCollapsed;
+                setIsCollapsed(newState);
+                localStorage.setItem("lab_sidebar_collapsed", String(newState));
+              }}
+              className={`p-2 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors w-full flex items-center border border-gray-100 cursor-pointer ${
+                isCollapsed ? "justify-center" : "justify-start gap-3 px-4"
+              }`}
+            >
+              {isCollapsed ? (
+                <ChevronRight className="w-5 h-5" />
+              ) : (
+                <>
+                  <ChevronLeft className="w-5 h-5" />
+                  <span className="text-sm font-medium">Collapse Menu</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
         {/* Logout Section */}
         <div className="p-4 border-t border-gray-200">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-50 hover:bg-red-100 transition-all text-red-600 w-full group"
+            className={`flex items-center rounded-xl bg-red-50 hover:bg-red-100 transition-all text-red-600 w-full group relative cursor-pointer ${
+              isCollapsed ? "justify-center p-3" : "gap-3 px-4 py-3"
+            }`}
           >
-            <LogOut className="w-5 h-5" />
-            <span className="font-medium">Logout</span>
+            <LogOut className="w-5 h-5 flex-shrink-0" />
+            {!isCollapsed && <span className="font-medium text-sm">Logout</span>}
+            
+            {isCollapsed && (
+              <span className="absolute left-full ml-4 px-3 py-2 bg-red-600 text-white text-xs font-semibold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-2 group-hover:translate-x-0 pointer-events-none whitespace-nowrap z-50">
+                Logout
+              </span>
+            )}
           </button>
         </div>
 
@@ -162,7 +217,7 @@ export default function LabDashboard() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto pt-[57px] md:pt-0">
-        <div className="p-6 md:p-8">
+        <div className="p-4 md:p-6 lg:p-8 w-full">
           <Outlet context={{ labId }} />
         </div>
       </main>

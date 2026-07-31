@@ -272,7 +272,7 @@ const ClinicDetails: React.FC = () => {
       </div>
 
       {/* ---------- Tab Content ---------- */}
-      <div className="max-w-[1500px] mx-auto px-4 py-6">
+      <div className="w-full px-4 py-6">
         {/* Overview */}
         {activeTab === "overview" && (
           <div className="w-full mx-auto">

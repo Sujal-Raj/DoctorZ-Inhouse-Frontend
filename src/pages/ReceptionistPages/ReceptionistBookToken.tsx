@@ -262,7 +262,7 @@ export default function BookToken() {
     }`;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-xl md:text-2xl font-semibold text-gray-900">

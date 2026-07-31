@@ -8,10 +8,6 @@ import RegisterPatient from './pages/RegisterPages/RegisterPatient'
 import RegisterDoctor from './pages/RegisterPages/RegisterDoctor'
 import RegisterClinic from './pages/RegisterPages/RegisterClinic'
 import Layout from './Layout';
-import DoctorLogin from './pages/LoginPages/DoctorLogin';
-import LoginClinic from './pages/LoginPages/LoginClinic';
-import LoginPatient from './pages/LoginPages/LoginPatient';
-import LoginLab from './pages/LoginPages/LoginLab';
 import DoctorDashboard from './pages/DoctorPages/DoctorDashboard';
 import DoctorAppointments from './pages/DoctorPages/DoctorAppointments';
 import DoctorDashboardHome from './pages/DoctorPages/DoctorHomeDashboard';
@@ -37,7 +33,6 @@ import ClinicProfile from './pages/ClinicPages/ClinicProfile';
 import AddDoctor from './pages/ClinicPages/AddDoctor';
 import ClinicDoctors from './pages/ClinicPages/ClinicDoctors';
 import AllClinicPatients from './pages/ClinicPages/AllClinicPatients';
-import LoginReceptionist from './pages/LoginPages/LoginReceptionist';
 import ReceptionistDashboard from './pages/ReceptionistPages/ReceptionistDashboard';
 import RegisterLab from './pages/RegisterPages/RegisterLab';
 import HomeLandingPage from './components/LandingPage';
@@ -88,10 +83,6 @@ function App() {
                   <Route path="/patient-register" element={<RegisterPatient />} />
             <Route path="/doctor-register" element={<RegisterDoctor />} />
             <Route path="/clinic-register" element={<RegisterClinic />} />
-            <Route path="/doctor-login" element={<DoctorLogin />} />
-            <Route path="/clinic-login" element={<LoginClinic />} />
-            <Route path="/patient-login" element={<LoginPatient />} />
-            <Route path="/lab-login" element={<LoginLab />} />
             <Route path="/lab-register" element={<RegisterLab />} />
             <Route path="/super-admin-login" element={<SuperAdminLogin />} />
             <Route path="/super-admin-dashboard" element={<SuperAdminDashboard />} />
@@ -178,7 +169,6 @@ function App() {
             <Route path="communication-hub" element={<CommunicationHub />} />
           </Route>
 
-          <Route path='/receptionist-login' element={<LoginReceptionist/>}/>
           <Route
           path="/receptionistDashboard/:id"
           element={<ReceptionistDashboard />}

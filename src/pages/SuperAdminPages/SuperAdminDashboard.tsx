@@ -186,7 +186,7 @@ export default function SuperAdminDashboard() {
     localStorage.removeItem("superAdminToken");
     localStorage.removeItem("superAdminInfo");
     toast.success("Successfully logged out");
-    navigate("/super-admin-login");
+    navigate("/");
   };
 
   const handleToggleHospitalStatus = async (hospitalId: string, currentStatus: string) => {
@@ -308,7 +308,7 @@ export default function SuperAdminDashboard() {
         </button>
       </header>
 
-      <main className="flex-1 p-6 space-y-6 max-w-7xl mx-auto w-full">
+      <main className="flex-grow p-6 space-y-6 w-full">
         {/* Statistics Widgets */}
         <section className="grid grid-cols-1 md:grid-cols-4 gap-5">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex items-center gap-4">

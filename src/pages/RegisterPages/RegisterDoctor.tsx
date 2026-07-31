@@ -27,8 +27,52 @@ type DoctorFormInputs = {
   address: string;
   state: string;
   city: string;
+  district: string;
+  pincode: string;
+  hprId?: string;
   availableOnline: boolean;
 };
+
+const specializationsList = [
+  "General Medicine",
+  "Pediatrics",
+  "Dermatology",
+  "Cardiology",
+  "Orthopedics",
+  "Gynecology/Obstetrics",
+  "Ophthalmology",
+  "ENT (Otolaryngology)",
+  "Psychiatry",
+  "Neurology",
+  "General Surgery",
+  "Dental / Dentistry"
+];
+
+const languagesList = [
+  "English",
+  "Hindi",
+  "Bengali",
+  "Telugu",
+  "Marathi",
+  "Tamil",
+  "Urdu",
+  "Gujarati",
+  "Kannada",
+  "Malayalam",
+  "Odia",
+  "Punjabi",
+  "Assamese",
+  "Maithili",
+  "Santali",
+  "Kashmiri",
+  "Nepali",
+  "Konkani",
+  "Sindhi",
+  "Dogri",
+  "Manipuri",
+  "Bodo",
+  "Sanskrit"
+];
 
 interface ClinicContext {
   clinicId?: string;
@@ -51,6 +95,24 @@ const RegisterDoctor: React.FC = () => {
   const [degreeFile, setDegreeFile] = useState<File | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
+
+  // Qualifications tag state
+  const [qualInput, setQualInput] = useState("");
+  const [qualificationTags, setQualificationTags] = useState<string[]>([]);
+
+  // Specialization state
+  const [selSpecialization, setSelSpecialization] = useState("");
+  const [otherSpecializationText, setOtherSpecializationText] = useState("");
+  const [showOtherSpecialization, setShowOtherSpecialization] = useState(false);
+
+  // Languages tags state
+  const [languageTags, setLanguageTags] = useState<string[]>([]);
+
+  // Achievements section state
+  const [achievements, setAchievements] = useState<{ title: string; file: File | null; preview: string | null }[]>([]);
+  const [newAchievementTitle, setNewAchievementTitle] = useState("");
+  const [newAchievementFile, setNewAchievementFile] = useState<File | null>(null);
+  const [newAchievementPreview, setNewAchievementPreview] = useState<string | null>(null);
 
   const [degreePreview, setDegreePreview] = useState<string | null>(() => {
     return localStorage.getItem("doctorDegreePreview");
@@ -79,6 +141,38 @@ const RegisterDoctor: React.FC = () => {
       Object.keys(parsedData).forEach((key) => {
         setValue(key as keyof DoctorFormInputs, parsedData[key]);
       });
+
+      // Initialize qualifications tags
+      if (parsedData.qualification) {
+        setQualificationTags(
+          parsedData.qualification
+            .split(",")
+            .map((s: string) => s.trim())
+            .filter(Boolean)
+        );
+      }
+
+      // Initialize languages tags
+      if (parsedData.languages) {
+        setLanguageTags(
+          parsedData.languages
+            .split(",")
+            .map((s: string) => s.trim())
+            .filter(Boolean)
+        );
+      }
+
+      // Initialize specialization dropdown
+      if (parsedData.specialization) {
+        if (specializationsList.includes(parsedData.specialization)) {
+          setSelSpecialization(parsedData.specialization);
+          setShowOtherSpecialization(false);
+        } else {
+          setSelSpecialization("Others");
+          setOtherSpecializationText(parsedData.specialization);
+          setShowOtherSpecialization(true);
+        }
+      }
     }
   }, [setValue]);
 
@@ -109,6 +203,7 @@ const RegisterDoctor: React.FC = () => {
     "experience",
     "fees",
     "languages",
+    "hprId",
   ];
   
   const step3Fields: (keyof DoctorFormInputs)[] = [
@@ -116,6 +211,8 @@ const RegisterDoctor: React.FC = () => {
     "pan",
     "address",
     "city",
+    "district",
+    "pincode",
     "state",
     "password",
   ];
@@ -160,13 +257,22 @@ const RegisterDoctor: React.FC = () => {
       if (key === "availableOnline") {
         formData.append(key, String(value));
       } else {
-        formData.append(key, value as string);
+        formData.append(key, (value !== undefined && value !== null) ? (value as string) : "");
       }
     });
     if (clinicId) formData.append("clinicId", clinicId);
     if (degreeFile) formData.append("degreeCert", degreeFile);
     if (photoFile) formData.append("photo", photoFile);
     if (signatureFile) formData.append("signature", signatureFile);
+
+    // Achievements integration
+    const achievementTitles = achievements.map((a) => a.title);
+    formData.append("achievementTitles", JSON.stringify(achievementTitles));
+    achievements.forEach((ach) => {
+      if (ach.file) {
+        formData.append("achievementFiles", ach.file);
+      }
+    });
 
     try {
       await registerDoctor(formData);
@@ -189,6 +295,10 @@ const RegisterDoctor: React.FC = () => {
       setDegreePreview(null);
       setPhotoPreview(null);
       setSigPreview(null);
+      setAchievements([]);
+      setNewAchievementTitle("");
+      setNewAchievementFile(null);
+      setNewAchievementPreview(null);
     } catch (error: any) {
       toast.error(
         error?.response?.data?.message || "Registration failed. Try again!",
@@ -232,7 +342,9 @@ const RegisterDoctor: React.FC = () => {
         placeholder={placeholder}
         {...registerField}
         onBlur={saveFormData}
-        className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-gray-800 shadow-sm focus:ring-2 focus:ring-[#0c213e] focus:border-[#0c213e] transition-all"
+        className={`w-full rounded-lg border border-gray-300 bg-white p-2.5 text-gray-800 shadow-sm focus:ring-2 focus:ring-[#0c213e] focus:border-[#0c213e] transition-all ${
+          type === "date" ? "clickable-date-input" : ""
+        }`}
       />
       {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
     </div>
@@ -241,8 +353,7 @@ const RegisterDoctor: React.FC = () => {
   function handleFileChange(
     e: React.ChangeEvent<HTMLInputElement>,
     setFile: React.Dispatch<React.SetStateAction<File | null>>,
-    setPreview: React.Dispatch<React.SetStateAction<string | null>>,
-    storageKey: string
+    setPreview: React.Dispatch<React.SetStateAction<string | null>>
   ) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -251,14 +362,28 @@ const RegisterDoctor: React.FC = () => {
 
     const previewUrl = URL.createObjectURL(file);
     setPreview(previewUrl);
-    localStorage.setItem(storageKey, previewUrl);
   }
 
   const progressPercentage = (currentStep / totalSteps) * 100;
 
   return (
     <>
-      
+      <style>{`
+        .clickable-date-input {
+          position: relative;
+        }
+        .clickable-date-input::-webkit-calendar-picker-indicator {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          height: 100%;
+          margin: 0;
+          padding: 0;
+          opacity: 0;
+          cursor: pointer;
+        }
+      `}</style>
 
       <Helmet>
         <title>Doctor Registration | Clinic Portal</title>
@@ -410,6 +535,11 @@ const RegisterDoctor: React.FC = () => {
                       value: /^[0-9]{10}$/,
                       message: "Mobile number must be 10 digits",
                     },
+                    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                      e.target.value = val;
+                      setValue("mobileNo", val, { shouldValidate: true });
+                    }
                   })}
                   error={errors.mobileNo?.message}
                   required
@@ -435,26 +565,130 @@ const RegisterDoctor: React.FC = () => {
                   Professional Details
                 </h2>
 
-                <InputField
-                  id="qualification"
-                  label="Qualification"
-                  placeholder="MBBS, MD"
-                  registerField={register("qualification", {
-                    required: "Qualification is required",
-                  })}
-                  error={errors.qualification?.message}
-                  required
-                />
-                <InputField
-                  id="specialization"
-                  label="Specialization"
-                  placeholder="Dermatology"
-                  registerField={register("specialization", {
-                    required: "Specialization is required",
-                  })}
-                  error={errors.specialization?.message}
-                  required
-                />
+                {/* Qualifications dynamic tags */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Qualifications <span className="text-red-500"> *</span>
+                  </label>
+                  <div className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      placeholder="e.g. MBBS, MD (Press Enter or Add)"
+                      value={qualInput}
+                      onChange={(e) => setQualInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === ",") {
+                          e.preventDefault();
+                          const val = qualInput.trim().replace(/,/g, "");
+                          if (val && !qualificationTags.includes(val)) {
+                            const newTags = [...qualificationTags, val];
+                            setQualificationTags(newTags);
+                            setValue("qualification", newTags.join(", "), { shouldValidate: true });
+                            saveFormData();
+                          }
+                          setQualInput("");
+                        }
+                      }}
+                      className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-gray-800 shadow-sm focus:ring-2 focus:ring-[#0c213e]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const val = qualInput.trim();
+                        if (val && !qualificationTags.includes(val)) {
+                          const newTags = [...qualificationTags, val];
+                          setQualificationTags(newTags);
+                          setValue("qualification", newTags.join(", "), { shouldValidate: true });
+                          saveFormData();
+                        }
+                        setQualInput("");
+                      }}
+                      className="bg-[#0c213e] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#1a3a5f] transition"
+                    >
+                      Add
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 min-h-[30px]">
+                    {qualificationTags.map((tag, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1 bg-[#0c213e]/10 text-[#0c213e] px-2.5 py-1 rounded-full text-xs font-semibold"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newTags = qualificationTags.filter((_, i) => i !== idx);
+                            setQualificationTags(newTags);
+                            setValue("qualification", newTags.join(", "), { shouldValidate: true });
+                            saveFormData();
+                          }}
+                          className="hover:text-red-500 font-bold ml-1 text-sm focus:outline-none"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <input type="hidden" {...register("qualification", { required: "Qualification is required" })} />
+                  {errors.qualification && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.qualification.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Specialization dropdown */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Specialization <span className="text-red-500"> *</span>
+                  </label>
+                  <select
+                    value={selSpecialization}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSelSpecialization(val);
+                      if (val === "Others") {
+                        setShowOtherSpecialization(true);
+                        setValue("specialization", otherSpecializationText, { shouldValidate: true });
+                      } else {
+                        setShowOtherSpecialization(false);
+                        setValue("specialization", val, { shouldValidate: true });
+                      }
+                      saveFormData();
+                    }}
+                    className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-gray-800 shadow-sm focus:ring-2 focus:ring-[#0c213e]"
+                  >
+                    <option value="">Select Specialization</option>
+                    {specializationsList.map((spec, i) => (
+                      <option key={i} value={spec}>
+                        {spec}
+                      </option>
+                    ))}
+                    <option value="Others">Others (Specify)</option>
+                  </select>
+                  {showOtherSpecialization && (
+                    <input
+                      type="text"
+                      placeholder="Specify Specialization"
+                      value={otherSpecializationText}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setOtherSpecializationText(val);
+                        setValue("specialization", val, { shouldValidate: true });
+                        saveFormData();
+                      }}
+                      className="mt-2 w-full rounded-lg border border-gray-300 bg-white p-2.5 text-gray-800 shadow-sm focus:ring-2 focus:ring-[#0c213e]"
+                    />
+                  )}
+                  <input type="hidden" {...register("specialization", { required: "Specialization is required" })} />
+                  {errors.specialization && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.specialization.message}
+                    </p>
+                  )}
+                </div>
+
                 <InputField
                   id="experience"
                   label="Experience (Years)"
@@ -477,16 +711,84 @@ const RegisterDoctor: React.FC = () => {
                   error={errors.fees?.message}
                   required
                 />
-                <InputField
-                  id="languages"
-                  label="Languages Known"
-                  placeholder="English, Hindi"
-                  registerField={register("languages", {
-                    required: "Languages is required",
-                  })}
-                  error={errors.languages?.message}
-                  required
-                />
+
+                {/* Languages Know dropdown with tags */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Languages Known <span className="text-red-500"> *</span>
+                  </label>
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val && !languageTags.includes(val)) {
+                        const newTags = [...languageTags, val];
+                        setLanguageTags(newTags);
+                        setValue("languages", newTags.join(", "), { shouldValidate: true });
+                        saveFormData();
+                      }
+                    }}
+                    className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-gray-800 shadow-sm focus:ring-2 focus:ring-[#0c213e]"
+                  >
+                    <option value="">Select Language</option>
+                    {languagesList.map((lang, i) => (
+                      <option key={i} value={lang}>
+                        {lang}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="flex flex-wrap gap-1.5 mt-2 min-h-[30px]">
+                    {languageTags.map((tag, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1 bg-[#0c213e]/10 text-[#0c213e] px-2.5 py-1 rounded-full text-xs font-semibold"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newTags = languageTags.filter((_, i) => i !== idx);
+                            setLanguageTags(newTags);
+                            setValue("languages", newTags.join(", "), { shouldValidate: true });
+                            saveFormData();
+                          }}
+                          className="hover:text-red-500 font-bold ml-1 text-sm focus:outline-none"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <input type="hidden" {...register("languages", { required: "Languages are required" })} />
+                  {errors.languages && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.languages.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* HPR ID Optional Field */}
+                <div className="md:col-span-2 mt-4 pt-4 border-t border-gray-200">
+                  <label htmlFor="hprId" className="block text-sm font-semibold text-gray-700 mb-1">
+                    HPR ID (Optional)
+                  </label>
+                  <p className="text-xs text-gray-500 mb-2">
+                    Healthcare Professionals Registry ID (e.g. 12-3456-7890-1234 or username@hpr)
+                  </p>
+                  <input
+                    id="hprId"
+                    type="text"
+                    placeholder="12-3456-7890-1234"
+                    {...register("hprId")}
+                    onBlur={saveFormData}
+                    className="w-full md:w-1/2 rounded-lg border border-gray-300 bg-white p-2.5 text-gray-800 shadow-sm focus:ring-2 focus:ring-[#0c213e] focus:border-[#0c213e] transition-all"
+                  />
+                  {errors.hprId && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.hprId.message}
+                    </p>
+                  )}
+                </div>
 
                 <div className="flex items-center gap-2 mt-6">
                   <input
@@ -524,6 +826,11 @@ const RegisterDoctor: React.FC = () => {
                       value: /^[0-9]{12}$/,
                       message: "Aadhar must be exactly 12 digits",
                     },
+                    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 12);
+                      e.target.value = val;
+                      setValue("aadhar", val, { shouldValidate: true });
+                    }
                   })}
                   error={errors.aadhar?.message}
                   required
@@ -539,6 +846,11 @@ const RegisterDoctor: React.FC = () => {
                       value: /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/,
                       message: "Enter valid PAN (ABCDE1234F)",
                     },
+                    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                      const val = e.target.value.toUpperCase().slice(0, 10);
+                      e.target.value = val;
+                      setValue("pan", val, { shouldValidate: true });
+                    }
                   })}
                   error={errors.pan?.message}
                   required
@@ -554,6 +866,7 @@ const RegisterDoctor: React.FC = () => {
                   error={errors.address?.message}
                   required
                 />
+
                 <InputField
                   id="city"
                   label="City"
@@ -562,6 +875,37 @@ const RegisterDoctor: React.FC = () => {
                     required: "City is required",
                   })}
                   error={errors.city?.message}
+                  required
+                />
+
+                <InputField
+                  id="district"
+                  label="District"
+                  placeholder="Durg"
+                  registerField={register("district", {
+                    required: "District is required",
+                  })}
+                  error={errors.district?.message}
+                  required
+                />
+
+                <InputField
+                  id="pincode"
+                  label="Pin Code"
+                  placeholder="490006"
+                  registerField={register("pincode", {
+                    required: "Pin Code is required",
+                    pattern: {
+                      value: /^[0-9]{6}$/,
+                      message: "Pin Code must be exactly 6 digits",
+                    },
+                    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                      e.target.value = val;
+                      setValue("pincode", val, { shouldValidate: true });
+                    }
+                  })}
+                  error={errors.pincode?.message}
                   required
                 />
                 <div>
@@ -691,8 +1035,7 @@ const RegisterDoctor: React.FC = () => {
                             handleFileChange(
                               e,
                               fileInput.setFile,
-                              fileInput.setPreview,
-                              fileInput.storageKey
+                              fileInput.setPreview
                             )
                           }
                         />
@@ -701,11 +1044,21 @@ const RegisterDoctor: React.FC = () => {
                       {fileInput.file && (
                         <div className="border border-[#0c213e]/30 rounded-lg p-2 bg-gray-50 shadow-sm flex items-center justify-center w-28 h-28">
                           {fileInput.preview ? (
-                            <img
-                              src={fileInput.preview}
-                              alt="Preview"
-                              className="object-cover w-full h-full rounded-md"
-                            />
+                            fileInput.file.type === "application/pdf" || fileInput.file.name.toLowerCase().endsWith(".pdf") ? (
+                              <div className="flex flex-col items-center justify-center text-red-500 text-xs text-center w-full h-full">
+                                <FileText size={32} className="text-red-500 mb-1" />
+                                <span className="font-semibold text-gray-700 truncate max-w-full px-1 text-[10px]">{fileInput.file.name}</span>
+                                <a href={fileInput.preview} target="_blank" rel="noreferrer" className="text-blue-600 underline mt-1 font-medium hover:text-blue-800 text-[10px]">
+                                  View PDF
+                                </a>
+                              </div>
+                            ) : (
+                              <img
+                                src={fileInput.preview}
+                                alt="Preview"
+                                className="object-cover w-full h-full rounded-md"
+                              />
+                            )
                           ) : (
                             <div className="flex flex-col items-center text-gray-600 text-xs text-center">
                               <FileText size={20} />
@@ -719,6 +1072,143 @@ const RegisterDoctor: React.FC = () => {
                     </div>
                   </div>
                 ))}
+
+                {/* Achievements & Other Certificates Section */}
+                <div className="md:col-span-2 mt-8 pt-6 border-t border-gray-200">
+                  <h3 className="text-lg font-semibold text-[#0c213e] mb-4">
+                    🏆 Achievements & Additional Certificates (Optional)
+                  </h3>
+                  
+                  {/* Form to add a new achievement */}
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                          Achievement Title
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Best Pediatrician Award 2025"
+                          value={newAchievementTitle}
+                          onChange={(e) => setNewAchievementTitle(e.target.value)}
+                          className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-gray-800 shadow-sm focus:ring-2 focus:ring-[#0c213e]"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                          Upload Certificate (Image or PDF)
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <label className="flex items-center justify-center flex-1 h-11 border border-dashed border-[#0c213e]/40 rounded-lg cursor-pointer hover:bg-[#0c213e]/5 transition px-3 bg-white">
+                            <Upload className="text-[#0c213e] mr-2" size={16} />
+                            <span className="text-gray-600 text-xs truncate">
+                              {newAchievementFile ? newAchievementFile.name : "Select File"}
+                            </span>
+                            <input
+                              type="file"
+                              accept="image/*,application/pdf"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  setNewAchievementFile(file);
+                                  setNewAchievementPreview(URL.createObjectURL(file));
+                                }
+                              }}
+                            />
+                          </label>
+                          
+                          {newAchievementFile && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setNewAchievementFile(null);
+                                setNewAchievementPreview(null);
+                              }}
+                              className="text-red-500 hover:text-red-700 text-xs font-semibold px-2"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <button
+                      type="button"
+                      disabled={!newAchievementTitle.trim()}
+                      onClick={() => {
+                        if (newAchievementTitle.trim()) {
+                          setAchievements([
+                            ...achievements,
+                            {
+                              title: newAchievementTitle.trim(),
+                              file: newAchievementFile,
+                              preview: newAchievementPreview,
+                            },
+                          ]);
+                          setNewAchievementTitle("");
+                          setNewAchievementFile(null);
+                          setNewAchievementPreview(null);
+                        }
+                      }}
+                      className="mt-3 px-4 py-2 bg-[#0c213e] text-white text-xs font-semibold rounded-lg hover:bg-[#1a3a5f] disabled:opacity-50 transition"
+                    >
+                      + Add Achievement
+                    </button>
+                  </div>
+                  
+                  {/* List of achievements added */}
+                  {achievements.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                        Added Achievements ({achievements.length})
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {achievements.map((ach, idx) => {
+                          const isPDF = ach.file?.type === "application/pdf" || ach.file?.name.toLowerCase().endsWith(".pdf");
+                          return (
+                            <div key={idx} className="flex items-center justify-between border border-gray-200 rounded-lg p-3 bg-white shadow-sm">
+                              <div className="flex items-center gap-3 truncate">
+                                <div className="w-10 h-10 bg-[#0c213e]/5 rounded flex items-center justify-center text-[#0c213e] flex-shrink-0">
+                                  {isPDF ? <FileText size={20} className="text-red-500" /> : <FileText size={20} />}
+                                </div>
+                                <div className="truncate">
+                                  <p className="text-sm font-semibold text-gray-800 truncate">{ach.title}</p>
+                                  {ach.file && (
+                                    <p className="text-[10px] text-gray-500 truncate">{ach.file.name}</p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {ach.preview && (
+                                  <a
+                                    href={ach.preview}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-xs text-blue-600 hover:text-blue-800 underline font-medium"
+                                  >
+                                    View
+                                  </a>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setAchievements(achievements.filter((_, i) => i !== idx));
+                                  }}
+                                  className="text-red-500 hover:text-red-700 text-xs font-bold px-2"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

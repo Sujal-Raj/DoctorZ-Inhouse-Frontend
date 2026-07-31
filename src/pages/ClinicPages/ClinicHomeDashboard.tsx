@@ -147,7 +147,7 @@ const ClinicHomeDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8 font-sans text-gray-900">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         
         {/* Welcome Header */}
         <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-sm">

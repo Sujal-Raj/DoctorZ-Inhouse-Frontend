@@ -157,7 +157,7 @@ export default function DepartmentManagement() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto font-sans text-gray-900">
+    <div className="p-6 space-y-6 w-full font-sans text-gray-900">
       
 
       {/* Header */}

@@ -289,7 +289,7 @@ const PrescriptionForm: React.FC = () => {
   const formattedSymptomSuggestions = useMemo(() => filteredSymptoms.map(fmt), [filteredSymptoms]);
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
+    <div className="w-full px-4 py-8">
       <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
 
         {/* Form Header */}

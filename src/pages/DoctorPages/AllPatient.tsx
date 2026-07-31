@@ -403,7 +403,7 @@ const AllPatient: React.FC = () => {
     <main className="min-h-screen bg-gray-50 py-6 overflow-hidden">
       <title>Doctor Patients | Dashboard</title>
 
-      <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 max-w-[1400px] mx-auto">
+      <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8">
 
         {/* ── Header ── */}
         <div className="sticky top-0 bg-gray-50 pb-3 z-30 border-b border-gray-200">

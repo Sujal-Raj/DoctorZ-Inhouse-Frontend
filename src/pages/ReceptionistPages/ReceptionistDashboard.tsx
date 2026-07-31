@@ -37,7 +37,7 @@ export default function ReceptionistDashboard() {
     <div className="flex h-screen bg-gray-100">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      <div className="flex-1 p-6 overflow-y-auto">
+      <div className="flex-grow p-4 md:p-6 lg:p-8 w-full overflow-y-auto">
         {renderComponent()}
       </div>
     </div>
