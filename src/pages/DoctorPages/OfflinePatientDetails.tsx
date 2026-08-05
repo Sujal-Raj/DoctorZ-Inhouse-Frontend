@@ -1,20 +1,25 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Activity,
   ArrowLeft,
   CalendarDays,
-  CircleDollarSign,
   ClipboardList,
   FileText,
   Hash,
   Phone,
   ShieldCheck,
   Stethoscope,
-  UserRound,
-  UserSquare2,
+  User,
+  Heart,
+  AlertTriangle,
+  IndianRupee,
+  FileSpreadsheet,
+  ChevronRight
 } from "lucide-react";
 import api from "../../Services/mainApi";
+
+// ─── Interfaces ───────────────────────────────────────────────────────────────
 
 interface UserProfile {
   _id?: string;
@@ -58,10 +63,6 @@ interface EMRRecord {
   updatedAt: string;
 }
 
-// interface EMRResponse {
-//   emr: EMRRecord[];
-// }
-
 interface PrescriptionItem {
   _id: string;
   name?: string;
@@ -84,7 +85,7 @@ interface PrescriptionItem {
   createdAt?: string;
 }
 
-const themeColor = "#0c213e";
+// ─── Formatting Helpers ───────────────────────────────────────────────────────
 
 const formatDate = (value?: string) => {
   if (!value) return "—";
@@ -106,13 +107,13 @@ const formatDateTime = (value?: string) => {
   });
 };
 
-const statusStyles: Record<string, { bg: string; text: string; label: string }> = {
-  pending: { bg: "#fff7e6", text: "#b45309", label: "Pending" },
-  completed: { bg: "#e6fef0", text: "#0a7d32", label: "Completed" },
-  cancelled: { bg: "#fef2f2", text: "#b91c1c", label: "Cancelled" },
+const statusStyles: Record<string, { bg: string; text: string; border: string }> = {
+  pending: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200" },
+  completed: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" },
+  cancelled: { bg: "bg-red-50", text: "text-red-700", border: "border-red-200" },
 };
 
-const OfflinePatientDetails: React.FC = () => {
+export default function OfflinePatientDetails() {
   const navigate = useNavigate();
   const location = useLocation();
   const { drId, userId } = useParams<{ drId: string; userId: string }>();
@@ -125,6 +126,8 @@ const OfflinePatientDetails: React.FC = () => {
   const [prescriptions, setPrescriptions] = useState<PrescriptionItem[]>([]);
   const [loading, setLoading] = useState(!location.state?.booking);
   const [prescriptionLoading, setPrescriptionLoading] = useState(false);
+
+  // ─── Fetch Core Booking Data ────────────────────────────────────────────────
 
   useEffect(() => {
     if (location.state?.booking) {
@@ -163,6 +166,8 @@ const OfflinePatientDetails: React.FC = () => {
     fetchBooking();
   }, [drId, userId, location.state]);
 
+  // ─── Fetch Appointment History ──────────────────────────────────────────────
+
   useEffect(() => {
     if (!drId || !userId) return;
 
@@ -189,19 +194,12 @@ const OfflinePatientDetails: React.FC = () => {
     fetchHistory();
   }, [drId, userId]);
 
-  // const patientAadhar =
-  //   typeof booking?.userId === "object" && booking.userId?.aadhar
-  //     ? booking.userId.aadhar
-  //     : typeof booking?.userId === "object" && booking.userId?._id
-  //     ? booking.userId._id
-  //     : typeof booking?.userId === "string"
-  //     ? booking.userId
-  //     : "";
+  // ─── Patient Details Resolution ─────────────────────────────────────────────
 
   const patientName =
     typeof booking?.userId === "object" && booking.userId?.fullName
       ? booking.userId.fullName
-      : booking?.patient || "Unknown Patient";
+      : booking?.patient || "Walk-in Patient";
 
   const patientAge =
     typeof booking?.userId === "object" && booking.userId?.age ? booking.userId.age : "—";
@@ -219,52 +217,55 @@ const OfflinePatientDetails: React.FC = () => {
   const patientEmail =
     typeof booking?.userId === "object" && booking.userId?.email ? booking.userId.email : "—";
 
-  const status = booking?.status ? statusStyles[booking.status] : statusStyles.pending;
+  const patientAadhar =
+    typeof booking?.userId === "object" && booking.userId?.aadhar ? booking.userId.aadhar : "";
 
-
-  console.log(patientName,patientPhone);
-useEffect(() => {
-  const fetchEMR = async () => {
-    const name = patientName?.trim();
-
-    if (!name || name === "Unknown Patient") {
-      setEmrRecords([]);
-      return;
-    }
-
-    try {
-      const res = await api.get<{ message: string; emr: EMRRecord[] }>(
-        `/api/emr/name/${encodeURIComponent(name)}`
-      );
-      setEmrRecords(res.data.emr || []);
-    } catch (error) {
-      console.error("Failed to load patient EMR:", error);
-      setEmrRecords([]);
-    }
-  };
-
-  fetchEMR();
-}, [patientName]);
+  // ─── Fetch EMR Profiles by Name ────────────────────────────────────────────
 
   useEffect(() => {
-    console.log("hello")
+    const fetchEMR = async () => {
+      const name = patientName?.trim();
+
+      if (!name || name === "Walk-in Patient") {
+        setEmrRecords([]);
+        return;
+      }
+
+      try {
+        const res = await api.get<{ message: string; emr: EMRRecord[] }>(
+          `/api/emr/name/${encodeURIComponent(name)}`
+        );
+        setEmrRecords(res.data.emr || []);
+      } catch (error) {
+        console.error("Failed to load patient EMR:", error);
+        setEmrRecords([]);
+      }
+    };
+
+    fetchEMR();
+  }, [patientName]);
+
+  // ─── Fetch Prescriptions by Name/Mobile ─────────────────────────────────────
+
+  useEffect(() => {
     const fetchPrescriptions = async () => {
-      // if (!patientName || patientName === "Unknown Patient") return;
-      // if (!patientPhone || patientPhone === "—") return;
+      const name = patientName?.trim();
+      if (!name || name === "Walk-in Patient") {
+        setPrescriptions([]);
+        return;
+      }
 
       try {
         setPrescriptionLoading(true);
-        const res = await api.get<{ count: number; prescriptions: PrescriptionItem[] }>(
-          "/api/prescription/prescriptions",
-          {
-            params: {
-              name: patientName,
-              // mobileNumber: patientPhone,
-            },
-          }
-        );
-        console.log("res:",res)
+        const queryParams = new URLSearchParams();
+        queryParams.append("name", name);
+        if (patientPhone !== "—") {
+          queryParams.append("mobileNumber", String(patientPhone));
+        }
 
+        const res = await api.get<{ prescriptions: PrescriptionItem[] }>(
+          `/api/prescription/prescriptions?${queryParams.toString()}`
+        );
         setPrescriptions(res.data.prescriptions || []);
       } catch (error) {
         console.error("Failed to load prescriptions:", error);
@@ -277,535 +278,328 @@ useEffect(() => {
     fetchPrescriptions();
   }, [patientName, patientPhone]);
 
-  return (
-    <main className="min-h-screen bg-gray-50 py-6">
-      <div className="w-full px-4 sm:px-6 lg:px-8">
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[500px]">
+        <div className="w-10 h-10 border-4 border-[#0c213e] border-t-transparent rounded-full animate-spin"></div>
+        <p className="mt-4 text-sm text-gray-500 font-medium font-[Poppins]">Loading Clinical Profile Details...</p>
+      </div>
+    );
+  }
+
+  if (!booking) {
+    return (
+      <div className="p-8 text-center max-w-xl mx-auto font-[Poppins]">
+        <div className="w-12 h-12 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+          <AlertTriangle />
+        </div>
+        <h2 className="text-lg font-bold text-gray-900">Patient Profile Not Found</h2>
+        <p className="text-sm text-gray-500 mt-2">
+          The requested offline patient registration record could not be located in the database indexes.
+        </p>
         <button
           onClick={() => navigate(-1)}
-          className="mb-5 inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
+          className="mt-6 inline-flex items-center gap-2 bg-[#0c213e] hover:bg-blue-900 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition"
         >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Patients
+          <ArrowLeft className="w-4 h-4" /> Back to List
         </button>
+      </div>
+    );
+  }
 
-        {loading ? (
-          <div className="flex min-h-96 items-center justify-center rounded-3xl border border-gray-200 bg-white shadow-sm">
-            <div className="flex items-center gap-3 text-gray-500">
-              <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-              </svg>
-              Loading patient details...
-            </div>
+  const activeStatus = statusStyles[booking.status] || statusStyles.pending;
+
+  return (
+    <main className="min-h-screen bg-gray-50/50 pb-12 font-[Poppins] px-6 py-6 w-full">
+      <div className="max-w-full w-full mx-auto space-y-6">
+
+        {/* ─── Header & Nav ─── */}
+        <div className="flex items-center justify-between bg-white border border-gray-200 p-4 rounded-2xl shadow-xs">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 px-3.5 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-xs font-bold rounded-xl transition cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back to Patient List
+          </button>
+          
+          <div className="flex items-center gap-2 text-xs text-gray-400">
+            <span>Clinical Registry /</span>
+            <span className="font-semibold text-gray-700">{patientName}</span>
           </div>
-        ) : !booking ? (
-          <div className="rounded-3xl border border-gray-200 bg-white p-10 text-center shadow-sm">
-            <h2 className="text-xl font-semibold text-gray-800">Patient details not found</h2>
-            <p className="mt-2 text-sm text-gray-500">
-              This offline patient record could not be loaded.
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
-            <section
-              className="px-6 py-6 text-white"
-              style={{ background: `linear-gradient(135deg, ${themeColor}, #173d68)` }}
-            >
-              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        </div>
+
+        {/* ─── Main Content Layout Grid ─── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+          {/* ─── Left Column (EMR & Prescriptions) ─── */}
+          <section className="lg:col-span-8 space-y-6">
+            
+            {/* Patient Header Bio Card */}
+            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-xs relative overflow-hidden">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/15 text-2xl font-bold shadow-inner">
+                  <div className="w-16 h-16 bg-blue-50 text-[#0c213e] border border-blue-150 rounded-2xl flex items-center justify-center font-bold text-2xl">
                     {patientName.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.25em] text-blue-100">
-                      Offline Patient
+                    <h2 className="text-xl font-bold text-gray-900 capitalize">{patientName}</h2>
+                    <p className="text-xs text-gray-500 font-medium mt-1">
+                      {patientAge !== "—" ? `${patientAge} Yrs` : "Age: N/A"} • {patientGender}
                     </p>
-                    <h1 className="text-2xl font-bold">{patientName}</h1>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Phone: {patientPhone} | Aadhar: {patientAadhar || "N/A"}
+                    </p>
                   </div>
                 </div>
-
-                <span
-                  className="inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold"
-                  style={{ background: status.bg, color: status.text }}
-                >
-                  {status.label}
+                
+                <span className={`inline-flex items-center px-3.5 py-1 rounded-full text-xs font-bold border ${activeStatus.bg} ${activeStatus.text} ${activeStatus.border} self-start sm:self-center`}>
+                  Status: {booking.status.toUpperCase()}
                 </span>
               </div>
-            </section>
+            </div>
 
-            <section className="grid gap-6 px-6 py-6 lg:grid-cols-[1.2fr_0.8fr]">
-              <div className="space-y-6">
-                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5">
-                  <div className="mb-4 flex items-center gap-2">
-                    <UserRound className="h-5 w-5 text-[#0c213e]" />
-                    <h2 className="text-lg font-semibold text-gray-900">Personal Details</h2>
-                  </div>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                        Full Name
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-gray-800">{patientName}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                        Gender
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-gray-800">{patientGender}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                        Age
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-gray-800">{patientAge} yrs</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                        Contact
-                      </p>
-                      <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-gray-800">
-                        <Phone className="h-4 w-4 text-gray-400" />
-                        {patientPhone}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                        Email
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-gray-800">{patientEmail}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                        Booked By
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-gray-800 capitalize">
-                        {booking.bookedBy || "Reception"}
-                      </p>
-                    </div>
-                  </div>
+            {/* Prescriptions History Section */}
+            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-xs space-y-6">
+              <div className="border-b border-gray-150 pb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileSpreadsheet className="h-5 w-5 text-[#0c213e]" />
+                  <h2 className="text-lg font-bold text-gray-900">Visit Prescriptions</h2>
                 </div>
-
-                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                  <div className="mb-4 flex items-center gap-2">
-                    <ClipboardList className="h-5 w-5 text-[#0c213e]" />
-                    <h2 className="text-lg font-semibold text-gray-900">Appointment History</h2>
-                  </div>
-
-                  {appointmentHistory.length > 0 ? (
-                    <div className="space-y-3">
-                      {appointmentHistory.map((entry) => (
-                        <div key={entry._id} className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-sm font-semibold text-gray-800">
-                              {formatDate(entry.date)}
-                            </span>
-                            <span
-                              className="rounded-full px-2.5 py-1 text-[10px] font-semibold"
-                              style={{
-                                background: statusStyles[entry.status]?.bg || "#f3f4f6",
-                                color: statusStyles[entry.status]?.text || "#374151",
-                              }}
-                            >
-                              {statusStyles[entry.status]?.label || entry.status}
-                            </span>
-                          </div>
-                          <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
-                            <span className="inline-flex items-center gap-1">
-                              <Hash className="h-3 w-3" /> Token {entry.tokenNumber}
-                            </span>
-                            <span>₹{entry.fees}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-400">No previous appointments found.</p>
-                  )}
-                </div>
-
-                <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-xs md:col-span-2">
-  <div className="mb-6 flex items-center gap-2 border-b border-gray-100 pb-4">
-    <Stethoscope className="h-5 w-5 text-[#0c213e]" />
-    <div>
-      <h2 className="text-lg font-bold text-gray-900">Patient EMR Timeline</h2>
-      <p className="text-sm text-gray-500">
-        Medical records fetched by patient name
-      </p>
-    </div>
-  </div>
-
-  {emrRecords.length > 0 ? (
-    <div className="space-y-4">
-      {emrRecords.map((record) => (
-        <div
-          key={record._id}
-          className="rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-gray-50 p-5 shadow-sm"
-        >
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h3 className="text-base font-semibold text-gray-900">
-                {record.fullName}
-              </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Mobile: {record.mobileNumber || "—"}
-              </p>
-            </div>
-
-            <span className="inline-flex w-fit rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-[#0c213e]">
-              {formatDateTime(record.createdAt)}
-            </span>
-          </div>
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl bg-white px-3 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                Allergies
-              </p>
-              <p className="mt-1 text-sm font-medium text-gray-800">
-                {record.allergies?.length ? record.allergies.join(", ") : "None reported"}
-              </p>
-            </div>
-
-            <div className="rounded-xl bg-white px-3 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                Diseases
-              </p>
-              <p className="mt-1 text-sm font-medium text-gray-800">
-                {record.diseases?.length ? record.diseases.join(", ") : "No disease history found"}
-              </p>
-            </div>
-
-            <div className="rounded-xl bg-white px-3 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                Current Medications
-              </p>
-              <p className="mt-1 text-sm font-medium text-gray-800">
-                {record.currentMedications?.length
-                  ? record.currentMedications.join(", ")
-                  : "No current medications listed"}
-              </p>
-            </div>
-
-            <div className="rounded-xl bg-white px-3 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                Past Surgeries
-              </p>
-              <p className="mt-1 text-sm font-medium text-gray-800">
-                {record.pastSurgeries?.length
-                  ? record.pastSurgeries.join(", ")
-                  : "No past surgeries recorded"}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-4 text-sm text-gray-500">
-            Prescription count:{" "}
-            <span className="font-semibold text-gray-800">
-              {record.prescriptionId?.length || 0}
-            </span>
-          </div>
-        </div>
-      ))}
-    </div>
-  ) : (
-    <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-6 py-10 text-center">
-      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm">
-        <Stethoscope className="h-6 w-6 text-gray-400" />
-      </div>
-      <h3 className="text-base font-semibold text-gray-900">No EMR found</h3>
-      <p className="mt-2 text-sm text-gray-500">
-        No EMR records were found for this patient name.
-      </p>
-    </div>
-  )}
-</div>
+                <span className="text-xs bg-gray-100 text-gray-600 font-bold px-2 py-0.5 rounded">
+                  {prescriptions.length} Records
+                </span>
               </div>
 
-              <div className="space-y-6">
-                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                  <div className="mb-4 flex items-center gap-2">
-                    <ShieldCheck className="h-5 w-5 text-[#0c213e]" />
-                    <h2 className="text-lg font-semibold text-gray-900">Visit Details</h2>
-                  </div>
+              {prescriptionLoading ? (
+                <div className="flex items-center gap-2 py-8 text-gray-500 text-sm justify-center">
+                  <div className="w-5 h-5 border-2 border-blue-900 border-t-transparent rounded-full animate-spin"></div>
+                  Loading prescription logs...
+                </div>
+              ) : prescriptions.length > 0 ? (
+                <div className="space-y-4">
+                  {prescriptions.map((item) => {
+                    const doctorName =
+                      typeof item.doctorId === "object" ? item.doctorId?.fullName || "—" : "—";
+                    const specialization =
+                      typeof item.doctorId === "object" ? item.doctorId?.specialization || "—" : "—";
 
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3">
-                      <span className="text-sm text-gray-500">Token Number</span>
-                      <span className="flex items-center gap-2 text-sm font-semibold text-gray-800">
-                        <Hash className="h-4 w-4 text-gray-400" />
-                        {booking.tokenNumber}
-                      </span>
-                    </div>
+                    const medicines =
+                      item.medicines?.length
+                        ? item.medicines
+                            .map((m) => (typeof m === "string" ? m : m?.name || ""))
+                            .filter(Boolean)
+                        : [];
 
-                    <div className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3">
-                      <span className="text-sm text-gray-500">Visit Date</span>
-                      <span className="flex items-center gap-2 text-sm font-semibold text-gray-800">
-                        <CalendarDays className="h-4 w-4 text-gray-400" />
-                        {formatDate(booking.date)}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3">
-                      <span className="text-sm text-gray-500">Consultation Fee</span>
-                      <span className="flex items-center gap-2 text-sm font-semibold text-gray-800">
-                        <CircleDollarSign className="h-4 w-4 text-gray-400" />
-                        ₹{booking.fees}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3">
-                      <span className="text-sm text-gray-500">Payment Status</span>
-                      <span
-                        className="rounded-full px-2.5 py-1 text-xs font-semibold"
-                        style={{
-                          background: booking.paid ? "#e6fef0" : "#fef2f2",
-                          color: booking.paid ? "#0a7d32" : "#b91c1c",
-                        }}
+                    return (
+                      <div
+                        key={item._id}
+                        className="rounded-2xl border border-gray-200 bg-gray-50/50 p-5 hover:border-blue-300 transition duration-150"
                       >
-                        {booking.paid ? "Paid" : "Unpaid"}
-                      </span>
-                    </div>
-                  </div>
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between border-b border-gray-200 pb-3 mb-4">
+                          <div>
+                            <h3 className="text-sm font-bold text-gray-900">
+                              {item.diagnosis || "No Diagnosis Provided"}
+                            </h3>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              Prescribed by: <span className="font-semibold text-gray-700">Dr. {doctorName}</span> • {specialization}
+                            </p>
+                          </div>
+
+                          {item.createdAt && (
+                            <span className="inline-flex w-fit rounded-lg bg-blue-50/60 border border-blue-100 px-2.5 py-1 text-xs font-bold text-[#0c213e]">
+                              {formatDateTime(item.createdAt)}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Prescribed details grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                          <div className="bg-white p-3.5 rounded-xl border border-gray-150">
+                            <span className="text-gray-400 font-bold uppercase tracking-wider block mb-1">Medicines</span>
+                            <p className="text-gray-800 font-semibold leading-relaxed">
+                              {medicines.length > 0
+                                ? medicines.join(", ")
+                                : item.prescriptions?.length
+                                ? item.prescriptions.join(", ")
+                                : "No medicines added"}
+                            </p>
+                          </div>
+
+                          <div className="bg-white p-3.5 rounded-xl border border-gray-150">
+                            <span className="text-gray-400 font-bold uppercase tracking-wider block mb-1">Recommended Tests</span>
+                            <p className="text-gray-800 font-semibold leading-relaxed">
+                              {item.recommendedTests?.length ? item.recommendedTests.join(", ") : "None"}
+                            </p>
+                          </div>
+
+                          {item.notes && (
+                            <div className="bg-white p-3.5 rounded-xl border border-gray-150 md:col-span-2">
+                              <span className="text-gray-400 font-bold uppercase tracking-wider block mb-1">Clinical Notes</span>
+                              <p className="text-gray-800 font-medium leading-relaxed">{item.notes}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {item.pdfUrl && (
+                          <div className="mt-4 pt-3 border-t border-gray-150 flex justify-end">
+                            <a
+                              href={item.pdfUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 bg-[#0c213e] hover:bg-blue-900 text-white px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer"
+                            >
+                              <FileText className="h-4.5 w-4.5" />
+                              Print / View PDF
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-
-                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-  <div className="mb-4 flex items-center gap-2">
-    <FileText className="h-5 w-5 text-[#0c213e]" />
-    <h2 className="text-lg font-semibold text-gray-900">Prescriptions</h2>
-  </div>
-
-  {prescriptionLoading ? (
-    <div className="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-5 text-sm text-gray-500">
-      <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-      </svg>
-      Loading prescriptions...
-    </div>
-  ) : prescriptions.length > 0 ? (
-    <div className="space-y-4">
-      {prescriptions.map((item) => {
-        const doctorName =
-          typeof item.doctorId === "object" ? item.doctorId?.fullName || "—" : "—";
-        const specialization =
-          typeof item.doctorId === "object" ? item.doctorId?.specialization || "—" : "—";
-
-        const medicines =
-          item.medicines?.length
-            ? item.medicines
-                .map((m) => (typeof m === "string" ? m : m?.name || ""))
-                .filter(Boolean)
-            : [];
-
-        return (
-          <div
-            key={item._id}
-            className="rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-gray-50 p-4 shadow-sm"
-          >
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <h3 className="text-base font-semibold text-gray-900">
-                  {item.diagnosis || item.title || "Prescription"}
-                </h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Dr. {doctorName} • {specialization}
-                </p>
-              </div>
-
-              {item.createdAt && (
-                <span className="inline-flex w-fit rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-[#0c213e]">
-                  {formatDateTime(item.createdAt)}
-                </span>
+              ) : (
+                <div className="text-center py-10 bg-gray-50 rounded-2xl border border-dashed border-gray-300 text-gray-400">
+                  <FileText className="w-12 h-12 mx-auto text-gray-300 stroke-[1.2] mb-2" />
+                  <p className="text-sm font-semibold">No Prescriptions Logged</p>
+                  <p className="text-xs text-gray-400 mt-1">This patient does not have any saved visit drafts.</p>
+                </div>
               )}
             </div>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl bg-white px-3 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                  Medicines
-                </p>
-                <p className="mt-1 text-sm font-medium text-gray-800">
-                  {medicines.length > 0
-                    ? medicines.join(", ")
-                    : item.prescriptions?.length
-                    ? item.prescriptions.join(", ")
-                    : "No medicine details"}
-                </p>
+          </section>
+
+          {/* ─── Right Column (EMR & Booking metadata) ─── */}
+          <aside className="lg:col-span-4 space-y-6">
+
+            {/* Vitals & Clinical History summary card */}
+            <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs space-y-5">
+              <div className="border-b border-gray-100 pb-3 flex items-center gap-2">
+                <Stethoscope className="h-5 w-5 text-[#0c213e]" />
+                <h2 className="text-base font-bold text-gray-900">Medical Summary (EMR)</h2>
               </div>
 
-              <div className="rounded-xl bg-white px-3 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                  Diagnosis
-                </p>
-                <p className="mt-1 text-sm font-medium text-gray-800">
-                  {item.diagnosis || "—"}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl bg-white px-3 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                  Recommended tests
-                </p>
-                <p className="mt-1 text-sm font-medium text-gray-800">
-                  {item.recommendedTests?.length ? item.recommendedTests.join(", ") : "None"}
-                </p>
-              </div>
-
-              <div className="rounded-xl bg-white px-3 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                  Notes
-                </p>
-                <p className="mt-1 text-sm font-medium text-gray-800">
-                  {item.notes || "—"}
-                </p>
-              </div>
-            </div>
-
-            {item.pdfUrl && (
-              <div className="mt-4">
-                <a
-                  href={item.pdfUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#0c213e] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#14365f]"
-                >
-                  <FileText className="h-4 w-4" />
-                  View prescription PDF
-                </a>
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  ) : (
-    <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-6 py-10 text-center">
-      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm">
-        <FileText className="h-6 w-6 text-gray-400" />
-      </div>
-      <h3 className="text-base font-semibold text-gray-900">No prescription found</h3>
-      <p className="mt-2 text-sm text-gray-500">
-        This patient does not have any prescription records yet.
-      </p>
-    </div>
-  )}
-</div>
-
-                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                  <div className="mb-4 flex items-center gap-2">
-                    <Activity className="h-5 w-5 text-[#0c213e]" />
-                    <h2 className="text-lg font-semibold text-gray-900">Medical History</h2>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                        Allergies
-                      </span>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {emrRecords[0]?.allergies?.length ? (
-                          emrRecords[0].allergies.map((item, index) => (
-                            <span
-                              key={`${item}-${index}`}
-                              className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600"
-                            >
-                              {item}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-sm text-gray-400">None reported</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                        Diseases
-                      </span>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {emrRecords[0]?.diseases?.length ? (
-                          emrRecords[0].diseases.map((item, index) => (
-                            <span
-                              key={`${item}-${index}`}
-                              className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700"
-                            >
-                              {item}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-sm text-gray-400">No disease history found</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                        Current Medications
-                      </span>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {emrRecords[0]?.currentMedications?.length ? (
-                          emrRecords[0].currentMedications.map((item, index) => (
-                            <span
-                              key={`${item}-${index}`}
-                              className="rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700"
-                            >
-                              {item}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-sm text-gray-400">No current medications listed</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                        Past Surgeries
-                      </span>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {emrRecords[0]?.pastSurgeries?.length ? (
-                          emrRecords[0].pastSurgeries.map((item, index) => (
-                            <span
-                              key={`${item}-${index}`}
-                              className="rounded-full bg-purple-50 px-2.5 py-1 text-xs font-semibold text-purple-700"
-                            >
-                              {item}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-sm text-gray-400">No past surgeries recorded</span>
-                        )}
-                      </div>
-                    </div>
+              <div className="space-y-4">
+                
+                {/* Allergies */}
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-gray-400 block mb-1.5">Allergies</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {emrRecords[0]?.allergies?.length ? (
+                      emrRecords[0].allergies.map((item, idx) => (
+                        <span key={idx} className="bg-red-50 border border-red-200 text-red-700 text-xs font-bold px-2.5 py-0.5 rounded-lg">
+                          {item}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-xs text-gray-400 italic">No allergies reported</span>
+                    )}
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                  <div className="mb-3 flex items-center gap-2">
-                    <UserSquare2 className="h-5 w-5 text-[#0c213e]" />
-                    <h2 className="text-lg font-semibold text-gray-900">Booking Summary</h2>
-                  </div>
-                  <div className="space-y-3 text-sm text-gray-700">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500">Booking ID</span>
-                      <span className="font-semibold">{booking._id}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500">Booking Time</span>
-                      <span className="font-semibold">{formatDateTime(booking.date)}</span>
-                    </div>
+                {/* Chronic Diseases */}
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-gray-400 block mb-1.5">Chronic Diseases</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {emrRecords[0]?.diseases?.length ? (
+                      emrRecords[0].diseases.map((item, idx) => (
+                        <span key={idx} className="bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold px-2.5 py-0.5 rounded-lg">
+                          {item}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-xs text-gray-400 italic">No chronic illness history</span>
+                    )}
                   </div>
                 </div>
+
+                {/* Current medications */}
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-gray-400 block mb-1.5">Current Medications</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {emrRecords[0]?.currentMedications?.length ? (
+                      emrRecords[0].currentMedications.map((item, idx) => (
+                        <span key={idx} className="bg-emerald-50 border border-emerald-250 text-emerald-700 text-xs font-bold px-2.5 py-0.5 rounded-lg">
+                          {item}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-xs text-gray-400 italic">No listed medications</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Past Surgeries */}
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-gray-400 block mb-1.5">Past Surgeries</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {emrRecords[0]?.pastSurgeries?.length ? (
+                      emrRecords[0].pastSurgeries.map((item, idx) => (
+                        <span key={idx} className="bg-purple-50 border border-purple-200 text-purple-700 text-xs font-bold px-2.5 py-0.5 rounded-lg">
+                          {item}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-xs text-gray-400 italic">No surgeries reported</span>
+                    )}
+                  </div>
+                </div>
+
               </div>
-            </section>
-          </div>
-        )}
+            </div>
+
+            {/* Visit Details card */}
+            <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs space-y-4">
+              <div className="border-b border-gray-100 pb-3 flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-[#0c213e]" />
+                <h2 className="text-base font-bold text-gray-900">Visit Summary</h2>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                
+                <div className="flex items-center justify-between bg-gray-50 px-3.5 py-2.5 rounded-xl border border-gray-150">
+                  <span className="text-gray-400 font-bold uppercase">Token Number</span>
+                  <span className="flex items-center gap-1 font-bold text-gray-800">
+                    <Hash className="w-3.5 h-3.5 text-gray-400" />
+                    Token #{booking.tokenNumber}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between bg-gray-50 px-3.5 py-2.5 rounded-xl border border-gray-150">
+                  <span className="text-gray-400 font-bold uppercase">Date of Visit</span>
+                  <span className="flex items-center gap-1.5 font-bold text-gray-800">
+                    <CalendarDays className="w-3.5 h-3.5 text-gray-400" />
+                    {formatDate(booking.date)}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between bg-gray-50 px-3.5 py-2.5 rounded-xl border border-gray-150">
+                  <span className="text-gray-400 font-bold uppercase">Consultation Fees</span>
+                  <span className="flex items-center gap-1 font-bold text-gray-800">
+                    <IndianRupee className="w-3.5 h-3.5 text-gray-400" />
+                    {booking.fees}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between bg-gray-50 px-3.5 py-2.5 rounded-xl border border-gray-150">
+                  <span className="text-gray-400 font-bold uppercase">Payment Status</span>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${booking.paid ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
+                    {booking.paid ? "Paid" : "Unpaid"}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between bg-gray-50 px-3.5 py-2.5 rounded-xl border border-gray-150">
+                  <span className="text-gray-400 font-bold uppercase">Booking ID</span>
+                  <span className="font-semibold text-gray-700 font-mono select-all truncate max-w-[120px]">{booking._id}</span>
+                </div>
+
+              </div>
+            </div>
+
+          </aside>
+
+        </div>
+
       </div>
     </main>
   );
-};
-
-export default OfflinePatientDetails;
+}

@@ -250,18 +250,18 @@ export default function DoctorDashboard() {
                     </span>
                   )}
                   
-                  {item.badge && item.badge > 0 && !isVisualCollapsed && (
+                  {typeof item.badge === "number" && item.badge > 0 && !isVisualCollapsed ? (
                     <span className={`
                       ml-auto px-2 py-0.5 text-xs font-bold rounded-full
                       ${isActive ? "bg-white text-[#0c213e]" : "bg-red-500 text-white"}
                     `}>
                       {item.badge > 99 ? "99+" : item.badge}
                     </span>
-                  )}
+                  ) : null}
 
-                  {item.badge && item.badge > 0 && isVisualCollapsed && (
+                  {typeof item.badge === "number" && item.badge > 0 && isVisualCollapsed ? (
                     <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>
-                  )}
+                  ) : null}
 
                   {isActive && !isVisualCollapsed && (
                     <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full"></div>

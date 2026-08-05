@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-
+import { useEffect, useState, useMemo } from "react";
 import {
   CalendarDaysIcon,
   CurrencyRupeeIcon,
@@ -10,6 +9,10 @@ import {
   BuildingStorefrontIcon,
   VideoCameraIcon,
 } from "@heroicons/react/24/solid";
+import { 
+  Search, Users, CheckCircle, Clock, AlertCircle, Calendar,
+  ArrowRight, Filter, RefreshCw
+} from "lucide-react";
 import api from "../../Services/mainApi";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -40,14 +43,23 @@ interface OfflineUser {
   aadhar?: string;
 }
 
+interface OfflinePatientData {
+  name?: string;
+  age?: number;
+  gender?: "Male" | "Female" | "Other";
+  aadhar?: string;
+  contact?: string;
+}
+
 interface OfflineBooking {
   _id: string;
   userId?: OfflineUser;
+  patient?: OfflinePatientData;
   bookedBy?: string;
   date: string;          // "YYYY-MM-DD"
   tokenNumber: number;
   fees: number;
-  status: "pending" | "completed" | "cancelled";
+  status: "pending" | "completed" | "registered" | "waiting" | "in-consultation" | "cancelled";
   paid: boolean;
 }
 
@@ -92,226 +104,19 @@ const savePrescribedBookingIds = (ids: string[]) => {
 
 const StatusBadge = ({ status }: { status: string }) => {
   const styles: Record<string, string> = {
-    pending: "bg-yellow-100 text-yellow-800",
-    completed: "bg-green-100 text-green-800",
-    cancelled: "bg-red-100 text-red-800",
+    pending: "bg-amber-50 text-amber-700 border-amber-200",
+    completed: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    cancelled: "bg-red-50 text-red-700 border-red-200",
+    waiting: "bg-blue-50 text-blue-700 border-blue-200",
+    "in-consultation": "bg-purple-50 text-purple-700 border-purple-200",
+    registered: "bg-gray-50 text-gray-700 border-gray-200"
   };
   return (
-    <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold capitalize ${styles[status] ?? "bg-gray-100 text-gray-700"}`}>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${styles[status] ?? "bg-gray-50 text-gray-700 border-gray-200"}`}>
       {status}
     </span>
   );
 };
-
-// ─── Online booking card ──────────────────────────────────────────────────────
-
-const OnlineBookingCard = ({
-  b,
-  onComplete,
-  onPrescription,
-  completing,
-  prescribed,
-}: {
-  b: OnlineBooking;
-  onComplete: (id: string) => void;
-  onPrescription: (b: OnlineBooking) => void;
-  completing:boolean;
-  prescribed:boolean;
-}) => {
-  const dateObj = new Date(b.dateTime);
-  const formattedDate = dateObj.toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
-  const formattedTime = dateObj.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-
-  return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition flex flex-col gap-3">
-      {/* Mode chip */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full text-xs font-semibold w-fit">
-          <VideoCameraIcon className="w-3.5 h-3.5" />
-          Online
-        </div>
-        <StatusBadge status={b.status} />
-      </div>
-
-      {/* Patient */}
-      <div>
-        <div className="flex items-center gap-2">
-          <UserIcon className="text-gray-500 w-5 h-5" />
-          <h3 className="text-base font-semibold text-gray-900 capitalize">{b.patient?.name}</h3>
-        </div>
-        <p className="text-gray-500 text-sm ml-7">{b.patient?.age} yrs • {b.patient?.gender}</p>
-        <p className="text-gray-500 text-sm ml-7">Contact: {b.patient?.contact}</p>
-      </div>
-
-      {/* Appointment details */}
-      <div className="text-sm text-gray-600 space-y-1.5">
-        <p className="flex items-center gap-2">
-          <CalendarDaysIcon className="w-4 h-4 text-gray-400 shrink-0" />
-          {formattedDate}
-        </p>
-        <p className="flex items-center gap-2">
-          <ClockIcon className="w-4 h-4 text-gray-400 shrink-0" />
-          {formattedTime}
-        </p>
-        <p className="flex items-center gap-2">
-          <CurrencyRupeeIcon className="w-4 h-4 text-gray-400 shrink-0" />
-          ₹{b.fees}
-        </p>
-      </div>
-
-      {/* Actions */}
-      <div className="flex flex-col gap-2 mt-auto">
-        {b.status === "pending" && (
-          // <button
-          //   onClick={() => onComplete(b._id)}
-          //   className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg text-sm font-medium transition"
-          // >
-          //   <CheckIcon className="w-4 h-4" />
-          //   Complete Appointment
-          // </button>
-          <button
-  onClick={() => onComplete(b._id)}
-  disabled={completing}
-  className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 disabled:bg-green-400 disabled:cursor-not-allowed text-white py-2 rounded-lg text-sm font-medium transition"
->
-  {completing ? "Completing..." : (
-    <>
-      <CheckIcon className="w-4 h-4" />
-      Complete Appointment
-    </>
-  )}
-</button>
-        )}
-        <button
-          onClick={() => onPrescription(b)}
-          disabled={prescribed}
-          className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-2 rounded-lg text-sm font-medium transition"
-        >
-          {prescribed ? "Prescription Done" : "Give Prescription"}
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// ─── Offline booking card ─────────────────────────────────────────────────────
-
-const OfflineBookingCard = ({
-  b,
-  onComplete,
-  onPrescription,
-  completing,
-  prescribed,
-}: {
-  b: OfflineBooking;
-  onComplete: (id: string) => void;
-  onPrescription: (b: OfflineBooking) => void;
-  completing:boolean;
-  prescribed:boolean;
-}) => {
-  const formattedDate = new Date(b.date).toLocaleDateString("en-IN", {
-    day: "2-digit", month: "long", year: "numeric",
-  });
-
-  return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition flex flex-col gap-3">
-      {/* Mode chip */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 bg-orange-50 text-orange-700 px-2.5 py-1 rounded-full text-xs font-semibold w-fit">
-          <BuildingStorefrontIcon className="w-3.5 h-3.5" />
-          Walk-in
-        </div>
-        <StatusBadge status={b.status} />
-      </div>
-
-      {/* Patient */}
-      <div>
-        <div className="flex items-center gap-2">
-          <UserIcon className="text-gray-500 w-5 h-5" />
-          <h3 className="text-base font-semibold text-gray-900 capitalize">{b.userId?.fullName ?? "Walk-in Patient"}</h3>
-        </div>
-        <p className="text-gray-500 text-sm ml-7 capitalize">{b.userId?.dob ? `${new Date().getFullYear() - new Date(b.userId.dob).getFullYear()} yrs • ` : ""}
-{b.userId?.gender ?? ""}</p>
-<p className="text-gray-500 text-sm ml-7">
-  📞{b.userId?.mobileNumber ?? "No mobile number"}
-</p>
-        <p className="text-gray-500 text-sm ml-7 capitalize">BookedBy: {b.bookedBy ?? "Reception"}</p>
-      </div>
-
-      {/* Appointment details */}
-      <div className="text-sm text-gray-600 space-y-1.5">
-        <p className="flex items-center gap-2">
-          <CalendarDaysIcon className="w-4 h-4 text-gray-400 shrink-0" />
-          {formattedDate}
-        </p>
-        <p className="flex items-center gap-2">
-          <HashtagIcon className="w-4 h-4 text-gray-400 shrink-0" />
-          Token No. <span className="font-bold text-[#0c213e]">#{b.tokenNumber}</span>
-        </p>
-        <p className="flex items-center gap-2">
-          <CurrencyRupeeIcon className="w-4 h-4 text-gray-400 shrink-0" />
-          ₹{b.fees}
-        </p>
-      </div>
-
-      {/* Actions */}
-      {b.status === "pending" && (
-        <div className="mt-auto">
-          {/* <button
-            onClick={() => onComplete(b._id)}
-            className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg text-sm font-medium transition"
-          >
-            <CheckIcon className="w-4 h-4" />
-            Complete Appointment
-          </button> */}
-          <button
-  onClick={() => onComplete(b._id)}
-  disabled={completing}
-  className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 disabled:bg-green-400 disabled:cursor-not-allowed text-white py-2 rounded-lg text-sm font-medium transition"
->
-  {completing ? "Completing..." : (
-    <>
-      <CheckIcon className="w-4 h-4" />
-      Complete Appointment
-    </>
-  )}
-</button>
-          <button
-            onClick={() => onPrescription(b)}
-            disabled={prescribed}
-            className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-2 rounded-lg text-sm font-medium transition mt-2"
-          >
-            {prescribed ? "Prescription Done" : "Give Prescription"}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ─── Section group renderer ───────────────────────────────────────────────────
-
-function SectionGroup<T,>({
-  title,
-  list,
-  renderCard,
-}: {
-  title: string;
-  list: T[];
-  renderCard: (item: T) => React.ReactNode;
-}) {
-  if (list.length === 0) return null;
-  return (
-    <div className="mb-8">
-      <h3 className="text-2xl font-bold text-gray-700 mb-4">{title}</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 w-full">
-        {list.map((item) => renderCard(item))}
-      </div>
-    </div>
-  );
-}
-
-// ─── Main component ───────────────────────────────────────────────────────────
 
 export default function DoctorAppointments() {
   const [onlineBookings, setOnlineBookings] = useState<OnlineBooking[]>([]);
@@ -320,12 +125,15 @@ export default function DoctorAppointments() {
   const [loading, setLoading] = useState(true);
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [prescribedIds, setPrescribedIds] = useState<string[]>(() => getPrescribedBookingIds());
+  
+  // Filters
+  const [searchTerm, setSearchTerm] = useState("");
 
   const doctorId = localStorage.getItem("doctorId");
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ── Fetch ──────────────────────────────────────────────────────────────────
+  // ─── Fetch ──────────────────────────────────────────────────────────────────
 
   const fetchOnlineBookings = async () => {
     if (!doctorId) return;
@@ -338,14 +146,15 @@ export default function DoctorAppointments() {
         const { today, startOfWeek, endOfWeek } = getWeekBounds();
 
         const todayList = data.bookings.filter(
-          (b) => new Date(b.dateTime).toDateString() === today.toDateString()
+          (b) => b.dateTime && new Date(b.dateTime).toDateString() === today.toDateString()
         );
         const weekList = data.bookings.filter((b) => {
+          if (!b.dateTime) return false;
           const d = new Date(b.dateTime);
           return d.toDateString() !== today.toDateString() && d >= startOfWeek && d <= endOfWeek;
         });
         const upcomingList = data.bookings.filter(
-          (b) => new Date(b.dateTime) > endOfWeek
+          (b) => b.dateTime && new Date(b.dateTime) > endOfWeek
         );
 
         const getD = (b: OnlineBooking) => new Date(b.dateTime);
@@ -369,7 +178,6 @@ export default function DoctorAppointments() {
       const { data } = await api.get<{ bookings: OfflineBooking[] }>(
         `/api/bookOffline/doctor/${doctorId}`
       );
-      console.log(data)
       if (data.bookings?.length > 0) {
         setOfflineBookings(
           sortByDate(data.bookings, (b) => new Date(b.date))
@@ -405,7 +213,7 @@ export default function DoctorAppointments() {
     });
   }, [location.state]);
 
-  // ── Status updates ─────────────────────────────────────────────────────────
+  // ─── Status updates ─────────────────────────────────────────────────────────
 
   const completeOnline = async (id: string) => {
     try {
@@ -431,236 +239,439 @@ export default function DoctorAppointments() {
     }
   };
 
-  // ── Group online by time period ────────────────────────────────────────────
+  // ─── Search filtering ────────────────────────────────────────────────────────
+  const filteredOnlineBookings = useMemo(() => {
+    if (!searchTerm.trim()) return onlineBookings;
+    const term = searchTerm.toLowerCase();
+    return onlineBookings.filter((b) => 
+      b.patient?.name?.toLowerCase().includes(term) ||
+      String(b.patient?.contact).includes(term)
+    );
+  }, [onlineBookings, searchTerm]);
 
-  const { today, startOfWeek, endOfWeek } = getWeekBounds();
+  const filteredOfflineBookings = useMemo(() => {
+    if (!searchTerm.trim()) return offlineBookings;
+    const term = searchTerm.toLowerCase();
+    return offlineBookings.filter((b) => {
+      const name = b.userId?.fullName || b.patient?.name || "";
+      const phone = b.userId?.mobileNumber || b.patient?.contact || "";
+      return name.toLowerCase().includes(term) || String(phone).includes(term);
+    });
+  }, [offlineBookings, searchTerm]);
 
-  const todayOnline = onlineBookings.filter(
-    (b) => new Date(b.dateTime).toDateString() === today.toDateString()
-  );
-  const weekOnline = onlineBookings.filter((b) => {
-    const d = new Date(b.dateTime);
-    return d.toDateString() !== today.toDateString() && d >= startOfWeek && d <= endOfWeek;
-  });
-  const upcomingOnline = onlineBookings.filter(
-    (b) => new Date(b.dateTime) > endOfWeek
-  );
-
-  // ── Group offline by time period ───────────────────────────────────────────
-
+  // ─── Grouping offline and online bookings ─────────────────────────────────────
+  const { today, endOfWeek } = getWeekBounds();
   const todayStr = today.toISOString().split("T")[0];
   const endOfWeekStr = endOfWeek.toISOString().split("T")[0];
 
-  const todayOffline = offlineBookings.filter((b) => b.date.slice(0, 10) === todayStr);
-  const weekOffline = offlineBookings.filter((b) => {
+  // Online Filtered
+  const todayOnline = filteredOnlineBookings.filter(
+    (b) => b.dateTime && new Date(b.dateTime).toDateString() === today.toDateString()
+  );
+  const weekOnline = filteredOnlineBookings.filter((b) => {
+    if (!b.dateTime) return false;
+    const d = new Date(b.dateTime);
+    return d.toDateString() !== today.toDateString() && d >= today && d <= endOfWeek;
+  });
+  const upcomingOnline = filteredOnlineBookings.filter(
+    (b) => b.dateTime && new Date(b.dateTime) > endOfWeek
+  );
+
+  // Offline Filtered
+  const todayOffline = filteredOfflineBookings.filter((b) => b.date && b.date.slice(0, 10) === todayStr);
+  const weekOffline = filteredOfflineBookings.filter((b) => {
+    if (!b.date) return false;
     const d = b.date.slice(0, 10);
     return d !== todayStr && d >= todayStr && d <= endOfWeekStr;
   });
-  const upcomingOffline = offlineBookings.filter(
-    (b) => b.date.slice(0, 10) > endOfWeekStr
+  const upcomingOffline = filteredOfflineBookings.filter(
+    (b) => b.date && b.date.slice(0, 10) > endOfWeekStr
   );
 
-  // ✅ Total future appointments count for each tab
-  const totalFutureOffline = todayOffline.length + weekOffline.length + upcomingOffline.length;
-  const totalFutureOnline = todayOnline.length + weekOnline.length + upcomingOnline.length;
+  // Totals for Dashboard
+  const totals = useMemo(() => {
+    const activeOffline = offlineBookings.filter(b => b.status === "pending" || b.status === "waiting" || b.status === "in-consultation");
+    const activeOnline = onlineBookings.filter(b => b.status === "pending");
+    
+    const completedOffline = offlineBookings.filter(b => b.status === "completed").length;
+    const completedOnline = onlineBookings.filter(b => b.status === "completed").length;
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+    return {
+      waitingWalkins: activeOffline.length,
+      waitingOnline: activeOnline.length,
+      completedToday: completedOffline + completedOnline,
+      totalActive: activeOffline.length + activeOnline.length
+    };
+  }, [offlineBookings, onlineBookings]);
+
+  // Render cards helper
+  const renderOnlineCard = (b: OnlineBooking) => {
+    const dateObj = new Date(b.dateTime);
+    const formattedDate = dateObj.toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
+    const formattedTime = dateObj.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+    const prescribed = prescribedIds.includes(b._id);
+
+    return (
+      <div key={b._id} className="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs hover:shadow-md hover:border-blue-300 transition flex flex-col justify-between group">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
+              <VideoCameraIcon className="w-3.5 h-3.5" />
+              Online Consult
+            </div>
+            <StatusBadge status={b.status} />
+          </div>
+
+          <div>
+            <h3 className="text-base font-bold text-gray-900 capitalize group-hover:text-blue-900 transition-colors">
+              {b.patient?.name}
+            </h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {b.patient?.age} Yrs • {b.patient?.gender}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">📞 {b.patient?.contact}</p>
+          </div>
+
+          <div className="pt-2 border-t border-gray-100 grid grid-cols-2 gap-2 text-xs text-gray-600">
+            <div className="flex items-center gap-1">
+              <CalendarDaysIcon className="w-4 h-4 text-gray-400" />
+              <span>{formattedDate}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <ClockIcon className="w-4 h-4 text-gray-400" />
+              <span>{formattedTime}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2 mt-5">
+          {b.status === "pending" && (
+            <button
+              onClick={() => completeOnline(b._id)}
+              disabled={completingId === b._id}
+              className="w-full flex items-center justify-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 disabled:bg-gray-100 text-emerald-700 py-2 rounded-xl text-xs font-bold border border-emerald-250 transition"
+            >
+              {completingId === b._id ? "Completing..." : (
+                <>
+                  <CheckIcon className="w-4 h-4" />
+                  Complete Consultation
+                </>
+              )}
+            </button>
+          )}
+          
+          <button
+            onClick={() => 
+              navigate(
+                `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
+                { state: { name: b.patient?.name, gender: b.patient?.gender, mobileNumber: b.patient?.contact } }
+              )
+            }
+            className={`w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition border ${prescribed ? "bg-gray-50 text-gray-400 border-gray-250" : "bg-[#0c213e] hover:bg-blue-900 text-white border-[#0c213e]"}`}
+          >
+            {prescribed ? (
+              <>
+                <CheckCircle size={14} className="text-green-500" /> Prescription Done
+              </>
+            ) : (
+              <>
+                Write Prescription <ArrowRight size={14} />
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderOfflineCard = (b: OfflineBooking) => {
+    const formattedDate = b.date ? new Date(b.date).toLocaleDateString("en-IN", {
+      day: "2-digit", month: "long", year: "numeric",
+    }) : "—";
+    
+    const patientName = b.userId?.fullName || b.patient?.name || "Walk-in Patient";
+    const patientGender = b.userId?.gender || b.patient?.gender || "Unknown";
+    const patientPhone = b.userId?.mobileNumber || b.patient?.contact || "No Contact";
+    const patientAadhar = b.userId?.aadhar || b.patient?.aadhar || "";
+    const prescribed = prescribedIds.includes(b._id);
+
+    return (
+      <div key={b._id} className="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs hover:shadow-md hover:border-amber-300 transition flex flex-col justify-between group">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 bg-amber-50 text-amber-700 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
+              <BuildingStorefrontIcon className="w-3.5 h-3.5" />
+              Walk-in (Token #{b.tokenNumber})
+            </div>
+            <StatusBadge status={b.status} />
+          </div>
+
+          <div>
+            <h3 className="text-base font-bold text-gray-900 capitalize group-hover:text-amber-900 transition-colors flex items-center gap-1.5">
+              {patientName}
+            </h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {b.userId?.dob ? `${new Date().getFullYear() - new Date(b.userId.dob).getFullYear()} Yrs • ` : ""}
+              {b.patient?.age ? `${b.patient.age} Yrs • ` : ""}
+              {patientGender}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">📞 {patientPhone}</p>
+          </div>
+
+          <div className="pt-2 border-t border-gray-100 grid grid-cols-2 gap-2 text-xs text-gray-600">
+            <div className="flex items-center gap-1">
+              <CalendarDaysIcon className="w-4 h-4 text-gray-400" />
+              <span>{formattedDate}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <CurrencyRupeeIcon className="w-4 h-4 text-gray-400" />
+              <span>₹{b.fees}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2 mt-5">
+          {b.status === "pending" && (
+            <button
+              onClick={() => completeOffline(b._id)}
+              disabled={completingId === b._id}
+              className="w-full flex items-center justify-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 disabled:bg-gray-100 text-emerald-700 py-2 rounded-xl text-xs font-bold border border-emerald-250 transition"
+            >
+              {completingId === b._id ? "Completing..." : (
+                <>
+                  <CheckIcon className="w-4 h-4" />
+                  Complete Appointment
+                </>
+              )}
+            </button>
+          )}
+
+          <button
+            onClick={() => 
+              navigate(
+                `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${patientAadhar}`,
+                { state: { name: patientName, gender: patientGender, mobileNumber: patientPhone } }
+              )
+            }
+            className={`w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition border ${prescribed ? "bg-gray-50 text-gray-400 border-gray-250" : "bg-[#0c213e] hover:bg-blue-900 text-white border-[#0c213e]"}`}
+          >
+            {prescribed ? (
+              <>
+                <CheckCircle size={14} className="text-green-500" /> Prescription Done
+              </>
+            ) : (
+              <>
+                Write Prescription <ArrowRight size={14} />
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   if (loading) {
     return (
-      <div className="p-4 ml-5 lg:p-8 flex flex-col w-full">
-        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-6 text-gray-800">Appointments</h2>
-        <div className="flex justify-center py-16">
-          <div className="animate-spin rounded-full h-10 w-10 border-4 border-gray-200 border-t-[#0c213e]" />
-        </div>
+      <div className="p-8 flex flex-col items-center justify-center min-h-[400px]">
+        <RefreshCw className="w-10 h-10 text-[#0c213e] animate-spin mb-4" />
+        <p className="text-gray-500 font-medium">Reconciling doctor appointment queues...</p>
       </div>
     );
   }
 
   return (
-    <div className="p-4 ml-5 lg:p-8 flex flex-col w-full">
-      <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-6 text-gray-800">Appointments</h2>
+    <div className="w-full p-6 space-y-6">
+      
+      {/* ─── Header & Search Row ──────────────────────────────────────────────── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-xs">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Patient Appointments</h1>
+          <p className="text-sm text-gray-500">Manage walk-in lists and online consultations for today.</p>
+        </div>
 
-      {/* ── Tab switcher ── */}
-      <div className="flex gap-2 mb-8">
+        {/* Search Bar */}
+        <div className="relative w-full md:w-80">
+          <Search className="absolute left-3.5 top-3 w-4 h-4 text-gray-400" />
+          <input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search patient name / contact..."
+            className="w-full border border-gray-300 rounded-xl pl-10 pr-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+          />
+        </div>
+      </div>
+
+      {/* ─── Vitals Stats Cards ───────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        
+        {/* Total Active Queue */}
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 flex items-center gap-4 shadow-xs">
+          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
+            <Users className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Total Active Queue</span>
+            <h3 className="text-2xl font-bold text-gray-900 mt-0.5">{totals.totalActive}</h3>
+          </div>
+        </div>
+
+        {/* Walk-in Waiting */}
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 flex items-center gap-4 shadow-xs">
+          <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center shrink-0">
+            <BuildingStorefrontIcon className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Walk-in Waiting</span>
+            <h3 className="text-2xl font-bold text-gray-900 mt-0.5">{totals.waitingWalkins}</h3>
+          </div>
+        </div>
+
+        {/* Online Consulting */}
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 flex items-center gap-4 shadow-xs">
+          <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+            <VideoCameraIcon className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Online Consulting</span>
+            <h3 className="text-2xl font-bold text-gray-900 mt-0.5">{totals.waitingOnline}</h3>
+          </div>
+        </div>
+
+        {/* Consultations Done */}
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 flex items-center gap-4 shadow-xs">
+          <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
+            <CheckCircle className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Consultations Done</span>
+            <h3 className="text-2xl font-bold text-gray-900 mt-0.5">{totals.completedToday}</h3>
+          </div>
+        </div>
+
+      </div>
+
+      {/* ─── Tab Switcher ────────────────────────────────────────────────────── */}
+      <div className="flex gap-2 p-1 bg-gray-100 rounded-xl border border-gray-200 w-fit">
         <button
           onClick={() => setActiveTab("offline")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wide cursor-pointer ${
             activeTab === "offline"
-              ? "bg-[#0c213e] text-white border-[#0c213e] shadow"
-              : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+              ? "bg-[#0c213e] text-white shadow"
+              : "text-gray-600 hover:text-gray-900"
           }`}
         >
           <BuildingStorefrontIcon className="w-4 h-4" />
-          Walk-in
-          {/* ✅ Shows count only if there are future appointments, otherwise no badge */}
-          {totalFutureOffline > 0 && (
-            <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-bold ${activeTab === "offline" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-600"}`}>
-              {totalFutureOffline}
-            </span>
-          )}
+          Walk-in Patients
         </button>
         <button
           onClick={() => setActiveTab("online")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wide cursor-pointer ${
             activeTab === "online"
-              ? "bg-[#0c213e] text-white border-[#0c213e] shadow"
-              : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+              ? "bg-[#0c213e] text-white shadow"
+              : "text-gray-600 hover:text-gray-900"
           }`}
         >
           <VideoCameraIcon className="w-4 h-4" />
-          Online
-          {/* ✅ Shows count only if there are future appointments, otherwise no badge */}
-          {totalFutureOnline > 0 && (
-            <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-bold ${activeTab === "online" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-600"}`}>
-              {totalFutureOnline}
-            </span>
-          )}
+          Online Teleconsults
         </button>
       </div>
 
-      {/* ── Online tab ── */}
+      {/* ─── Online Tab Content ─────────────────────────────────────────────── */}
       {activeTab === "online" && (
-        <>
-          {/* ✅ Shows "No online appointments" when no future appointments */}
-          {totalFutureOnline === 0 ? (
-            <div className="text-center text-gray-500 py-10 text-lg">No online appointments</div>
+        <div className="space-y-8">
+          {filteredOnlineBookings.length === 0 ? (
+            <div className="text-center bg-white border border-gray-200 rounded-2xl p-12 text-gray-400 shadow-xs">
+              <VideoCameraIcon className="w-12 h-12 mx-auto stroke-[1.5] text-gray-300 mb-2" />
+              <p className="text-sm font-semibold">No Online Teleconsults Scheduled</p>
+              <p className="text-xs text-gray-400 mt-1">Check back later or refresh dashboard.</p>
+            </div>
           ) : (
             <>
-              <SectionGroup
-                title="Today's Appointments"
-                list={todayOnline}
-                renderCard={(b) => (
-                  <OnlineBookingCard
-                    key={b._id}
-                    b={b}
-                    onComplete={completeOnline}
-                    completing={completingId === b._id}
-                    prescribed={prescribedIds.includes(b._id)}
-                    onPrescription={(b) =>
-                      navigate(
-                        `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
-                        { state: { name: b.patient?.name, gender: b.patient?.gender } }
-                      )
-                    }
-                  />
-                )}
-              />
-              <SectionGroup
-                title="This Week's Appointments"
-                list={weekOnline}
-                renderCard={(b) => (
-                  <OnlineBookingCard
-                    key={b._id}
-                    b={b}
-                    onComplete={completeOnline}
-                    completing={completingId === b._id}
-                    prescribed={prescribedIds.includes(b._id)}
-                    onPrescription={(b) =>
-                      navigate(
-                        `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
-                        { state: { name: b.patient?.name, gender: b.patient?.gender } }
-                      )
-                    }
-                  />
-                )}
-              />
-              <SectionGroup
-                title="Upcoming Appointments"
-                list={upcomingOnline}
-                renderCard={(b) => (
-                  <OnlineBookingCard
-                    key={b._id}
-                    b={b}
-                    onComplete={completeOnline}
-                    completing={completingId === b._id}
-                    prescribed={prescribedIds.includes(b._id)}
-                    onPrescription={(b) =>
-                      navigate(
-                        `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
-                        { state: { name: b.patient?.name, gender: b.patient?.gender } }
-                      )
-                    }
-                  />
-                )}
-              />
+              {todayOnline.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <Clock size={16} className="text-blue-600" /> Today's Teleconsults
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                    {todayOnline.map(renderOnlineCard)}
+                  </div>
+                </div>
+              )}
+
+              {weekOnline.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <Calendar size={16} className="text-blue-600" /> Scheduled This Week
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                    {weekOnline.map(renderOnlineCard)}
+                  </div>
+                </div>
+              )}
+
+              {upcomingOnline.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <Calendar size={16} className="text-blue-600" /> Upcoming Schedules
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                    {upcomingOnline.map(renderOnlineCard)}
+                  </div>
+                </div>
+              )}
             </>
           )}
-        </>
+        </div>
       )}
 
-      {/* ── Offline (Walk-in) tab ── */}
+      {/* ─── Offline Tab Content ────────────────────────────────────────────── */}
       {activeTab === "offline" && (
-        <>
-          {/* ✅ Shows "No walk-in appointments" when no future appointments */}
-          {totalFutureOffline === 0 ? (
-            <div className="text-center text-gray-500 py-10 text-lg">No walk-in appointments</div>
+        <div className="space-y-8">
+          {filteredOfflineBookings.length === 0 ? (
+            <div className="text-center bg-white border border-gray-200 rounded-2xl p-12 text-gray-400 shadow-xs">
+              <BuildingStorefrontIcon className="w-12 h-12 mx-auto stroke-[1.5] text-gray-300 mb-2" />
+              <p className="text-sm font-semibold">No Walk-in Patients In Queue</p>
+              <p className="text-xs text-gray-400 mt-1">Reception check-ins will show up here.</p>
+            </div>
           ) : (
             <>
-              <SectionGroup
-                title="Today's Walk-ins"
-                list={todayOffline}
-                renderCard={(b) => (
-                  <OfflineBookingCard
-                    key={b._id}
-                    b={b}
-                    onComplete={completeOffline}
-                     completing={completingId === b._id}
-                     prescribed={prescribedIds.includes(b._id)}
-                    onPrescription={(b) =>{
-                        console.log(b);
-  console.log("Aadhar:", b.userId?.aadhar);
-                      navigate(
-                        `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.userId?.aadhar || ""}`,
-                        { state: { name: b.userId?.fullName, gender: b.userId?.gender,mobileNumber:b.userId?.mobileNumber } }
-                      )
-                    }
-                    }
-                  />
-                )}
-              />
-              <SectionGroup
-                title="This Week's Walk-ins"
-                list={weekOffline}
-                renderCard={(b) => (
-                  <OfflineBookingCard
-                    key={b._id}
-                    b={b}
-                    onComplete={completeOffline}
-                     completing={completingId === b._id}
-                     prescribed={prescribedIds.includes(b._id)}
-                    onPrescription={(b) =>
-                      navigate(
-                        `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.userId?.aadhar || ""}`,
-                        { state: { name: b.userId?.fullName, gender: b.userId?.gender,mobileNumber:b.userId?.mobileNumber } }
-                      )
-                    }
-                  />
-                )}
-              />
-              <SectionGroup
-                title="Upcoming Walk-ins"
-                list={upcomingOffline}
-                renderCard={(b) => (
-                  <OfflineBookingCard
-                    key={b._id}
-                    b={b}
-                    onComplete={completeOffline}
-                     completing={completingId === b._id}
-                     prescribed={prescribedIds.includes(b._id)}
-                    onPrescription={(b) =>
-                      navigate(
-                        `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.userId?.aadhar || ""}`,
-                        { state: { name: b.userId?.fullName, gender: b.userId?.gender,mobileNumber:b.userId?.mobileNumber } }
-                      )
-                    }
-                  />
-                )}
-              />
+              {todayOffline.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <Clock size={16} className="text-amber-600" /> Today's Walk-in Queue
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                    {todayOffline.map(renderOfflineCard)}
+                  </div>
+                </div>
+              )}
+
+              {weekOffline.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <Calendar size={16} className="text-amber-600" /> Scheduled This Week
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                    {weekOffline.map(renderOfflineCard)}
+                  </div>
+                </div>
+              )}
+
+              {upcomingOffline.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <Calendar size={16} className="text-amber-600" /> Upcoming Schedules
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                    {upcomingOffline.map(renderOfflineCard)}
+                  </div>
+                </div>
+              )}
             </>
           )}
-        </>
+        </div>
       )}
+
     </div>
   );
 }
