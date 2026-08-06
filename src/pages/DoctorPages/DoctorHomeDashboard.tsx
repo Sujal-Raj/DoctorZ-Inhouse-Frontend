@@ -12,6 +12,7 @@ import {
 import api from "../../Services/mainApi";
 import { useNavigate } from "react-router-dom";
 import Cookies from "js-cookie";
+import { Play, Pause, Power, Info } from "lucide-react";
 
 interface Doctor {
   _id: string;
@@ -41,6 +42,14 @@ const DoctorDashboardHome: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [totalPatients, setTotalPatients] = useState<number>(0);
   const [todaysAppointments, setTodaysAppointments] = useState<number>(0);
+  const [queueStatus, setQueueStatus] = useState<"active" | "paused" | "blocked">(() => {
+    return (localStorage.getItem("doctorQueueStatus") as any) || "active";
+  });
+
+  const toggleQueueStatus = (status: "active" | "paused" | "blocked") => {
+    setQueueStatus(status);
+    localStorage.setItem("doctorQueueStatus", status);
+  };
 
   const navigate = useNavigate();
   const token = Cookies.get("doctorToken");
@@ -157,7 +166,7 @@ const DoctorDashboardHome: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {/* Total Patients Card */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
           <div className="flex items-start justify-between mb-4">
@@ -187,6 +196,50 @@ const DoctorDashboardHome: React.FC = () => {
           <p className="text-sm text-gray-500">Scheduled for today</p>
         </div>
 
+        {/* Clinic Queue Status Card */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+          <div className="flex items-start justify-between mb-3">
+            <div className="p-2.5 bg-indigo-50 rounded-lg">
+              <ClockIcon className="w-5.5 h-5.5 text-indigo-600" />
+            </div>
+            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${
+              queueStatus === "active" ? "bg-green-50 text-green-700 border-green-200" :
+              queueStatus === "paused" ? "bg-amber-50 text-amber-700 border-amber-200 animate-pulse" :
+              "bg-red-50 text-red-700 border-red-200"
+            }`}>
+              {queueStatus === "active" ? "Queue Active" : queueStatus === "paused" ? "Paused" : "Intake Blocked"}
+            </span>
+          </div>
+          <h3 className="text-gray-600 text-xs font-bold uppercase tracking-wider mb-2">Clinic Queue Controls</h3>
+          
+          <div className="flex flex-col gap-1.5 mt-2">
+            <button
+              onClick={() => toggleQueueStatus("active")}
+              className={`w-full py-1 px-3 text-xs font-semibold rounded-lg border text-left flex items-center gap-1.5 transition cursor-pointer ${
+                queueStatus === "active" ? "bg-green-50 border-green-200 text-green-700" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <Play size={12} /> Active Queue
+            </button>
+            <button
+              onClick={() => toggleQueueStatus("paused")}
+              className={`w-full py-1 px-3 text-xs font-semibold rounded-lg border text-left flex items-center gap-1.5 transition cursor-pointer ${
+                queueStatus === "paused" ? "bg-amber-50 border-amber-200 text-amber-700" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <Pause size={12} /> Emergency Pause
+            </button>
+            <button
+              onClick={() => toggleQueueStatus("blocked")}
+              className={`w-full py-1 px-3 text-xs font-semibold rounded-lg border text-left flex items-center gap-1.5 transition cursor-pointer ${
+                queueStatus === "blocked" ? "bg-red-50 border-red-200 text-red-700" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <Power size={12} /> Block Rest of Day
+            </button>
+          </div>
+        </div>
+
         {/* Quick Access Card */}
         <div className="bg-[#0c213e] rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow text-white">
           <div className="flex items-start justify-between mb-4">
@@ -195,16 +248,15 @@ const DoctorDashboardHome: React.FC = () => {
             </div>
           </div>
           <h3 className="text-white/80 text-sm font-medium mb-1">Quick Actions</h3>
-          {/* <p className="text-2xl font-bold mb-4">Manage</p> */}
           <button
             onClick={() => navigate(`/doctordashboard/${doctorId}/time-slots`)}
-            className="w-full bg-white text-[#0c213e] px-4 py-2 rounded-lg font-medium text-sm hover:bg-gray-100 transition-colors mb-2"
+            className="w-full bg-white text-[#0c213e] px-4 py-2 rounded-lg font-medium text-sm hover:bg-gray-100 transition-colors mb-2 cursor-pointer"
           >
             Manage availability
           </button>
           <button
             onClick={() => navigate(`/doctordashboard/${doctorId}/appointments`)}
-            className="w-full bg-white text-[#0c213e] px-4 py-2 rounded-lg font-medium text-sm hover:bg-gray-100 transition-colors"
+            className="w-full bg-white text-[#0c213e] px-4 py-2 rounded-lg font-medium text-sm hover:bg-gray-100 transition-colors cursor-pointer"
           >
             View Appointments
           </button>

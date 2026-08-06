@@ -1,13 +1,14 @@
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useReducer, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { 
-  X, Plus, Search, FileText, Pill, Calendar, AlertCircle, 
-  Printer, Download, Mail, Save, ArrowLeft, Copy, 
-  Trash2, History, User, Activity, CheckCircle, RefreshCw,
-  PlusCircle
+  X, Search, FileText, Pill, AlertCircle, 
+  Printer, Mail, Save, ArrowLeft, Copy, 
+  Trash2, User, Activity, CheckCircle, RefreshCw,
+  PlusCircle, Video, Send, MessageSquare, Eye, VolumeX, Volume2, Camera, CameraOff, PhoneOff
 } from "lucide-react";
 import api from "../../Services/mainApi";
 import Swal from "sweetalert2";
+import io from "socket.io-client";
 
 import diseaseData from "../../assets/Disease_symptom_dataset.json";
 import symptomData from "../../assets/symptoms.json";
@@ -118,6 +119,80 @@ const BUILT_IN_TEMPLATES: Template[] = [
   }
 ];
 
+const MOCK_LAB_REPORTS = [
+  { id: "rep-1", name: "Complete Blood Count (CBC)", date: "2026-08-05", status: "Normal", flag: "normal", value: "WBC: 7.2k (Normal), RBC: 4.8M, Hemoglobin: 14.2 g/dL, Platelets: 250k" },
+  { id: "rep-2", name: "Lipid Profile Panel", date: "2026-08-05", status: "Abnormal Borderline", flag: "warning", value: "Total Cholesterol: 228 mg/dL (High), Triglycerides: 165 mg/dL, HDL: 42 mg/dL" },
+  { id: "rep-3", name: "Chest X-Ray PA View", date: "2026-07-20", status: "Clear", flag: "normal", value: "Cardiopulmonary markings normal. No infiltration or pleural effusion." },
+];
+
+// ─── useReducer Configuration for Form State ──────────────────────────────
+interface FormState {
+  diagnosisInput: string;
+  symptoms: string[];
+  symptomInput: string;
+  tests: string[];
+  testInput: string;
+  notes: string;
+  treatmentPlan: string;
+  followUp: string;
+  medicines: Medicine[];
+  medicineName: string;
+  medicineQty: string;
+  doseMorning: boolean;
+  doseAfternoon: boolean;
+  doseEvening: boolean;
+  doseNight: boolean;
+  doseTiming: "before_food" | "after_food" | "empty_stomach" | "bedtime" | "";
+  doseDuration: string;
+  doseDurationUnit: "Days" | "Weeks" | "Months" | "L.S.";
+  doseCustomInstructions: string;
+}
+
+type FormAction =
+  | { type: "SET_FIELD"; field: keyof FormState; value: any }
+  | { type: "SET_STATE"; payload: Partial<FormState> }
+  | { type: "RESET_FORM" };
+
+const initialFormState: FormState = {
+  diagnosisInput: "",
+  symptoms: [],
+  symptomInput: "",
+  tests: [],
+  testInput: "",
+  notes: "",
+  treatmentPlan: "",
+  followUp: "",
+  medicines: [],
+  medicineName: "",
+  medicineQty: "",
+  doseMorning: false,
+  doseAfternoon: false,
+  doseEvening: false,
+  doseNight: false,
+  doseTiming: "",
+  doseDuration: "",
+  doseDurationUnit: "Days",
+  doseCustomInstructions: "",
+};
+
+function formReducer(state: FormState, action: FormAction): FormState {
+  switch (action.type) {
+    case "SET_FIELD":
+      return { ...state, [action.field]: action.value };
+    case "SET_STATE":
+      return { ...state, ...action.payload };
+    case "RESET_FORM":
+      return {
+        ...initialFormState,
+        medicines: [],
+        symptoms: [],
+        tests: [],
+      };
+    default:
+      return state;
+  }
+}
+
 export default function ConsultationWorkspace() {
   const { bookingId } = useParams<{ bookingId: string }>();
   const doctorId = localStorage.getItem("doctorId") || undefined;
@@ -175,48 +250,122 @@ export default function ConsultationWorkspace() {
     return "Age: N/A";
   }, [patientInfo.age, patientInfo.dob]);
 
-  // ─── Active Prescription State ────────────────────────────────────────────────
-  const [diagnosisInput, setDiagnosisInput] = useState("");
+  // ─── useReducer Form State ──────────────────────────────────────────────────
+  const [formState, dispatch] = useReducer(formReducer, initialFormState);
+  
+  const {
+    diagnosisInput,
+    symptoms,
+    symptomInput,
+    tests,
+    testInput,
+    notes,
+    treatmentPlan,
+    followUp,
+    medicines,
+    medicineName,
+    medicineQty,
+    doseMorning,
+    doseAfternoon,
+    doseEvening,
+    doseNight,
+    doseTiming,
+    doseDuration,
+    doseDurationUnit,
+    doseCustomInstructions
+  } = formState;
+
+  // Custom setters to map to useReducer dispatch
+  const setDiagnosisInput = (val: string) => dispatch({ type: "SET_FIELD", field: "diagnosisInput", value: val });
+  const setSymptomInput = (val: string) => dispatch({ type: "SET_FIELD", field: "symptomInput", value: val });
+  const setSymptoms = (val: string[] | ((p: string[]) => string[])) => {
+    const value = typeof val === "function" ? val(symptoms) : val;
+    dispatch({ type: "SET_FIELD", field: "symptoms", value });
+  };
+  const setTestInput = (val: string) => dispatch({ type: "SET_FIELD", field: "testInput", value: val });
+  const setTests = (val: string[] | ((p: string[]) => string[])) => {
+    const value = typeof val === "function" ? val(tests) : val;
+    dispatch({ type: "SET_FIELD", field: "tests", value });
+  };
+  const setNotes = (val: string) => dispatch({ type: "SET_FIELD", field: "notes", value: val });
+  const setTreatmentPlan = (val: string) => dispatch({ type: "SET_FIELD", field: "treatmentPlan", value: val });
+  const setFollowUp = (val: string) => dispatch({ type: "SET_FIELD", field: "followUp", value: val });
+  const setMedicines = (val: Medicine[] | ((p: Medicine[]) => Medicine[])) => {
+    const value = typeof val === "function" ? val(medicines) : val;
+    dispatch({ type: "SET_FIELD", field: "medicines", value });
+  };
+  const setMedicineName = (val: string) => dispatch({ type: "SET_FIELD", field: "medicineName", value: val });
+  const setMedicineQty = (val: string) => dispatch({ type: "SET_FIELD", field: "medicineQty", value: val });
+  const setDoseMorning = (val: boolean) => dispatch({ type: "SET_FIELD", field: "doseMorning", value: val });
+  const setDoseAfternoon = (val: boolean) => dispatch({ type: "SET_FIELD", field: "doseAfternoon", value: val });
+  const setDoseEvening = (val: boolean) => dispatch({ type: "SET_FIELD", field: "doseEvening", value: val });
+  const setDoseNight = (val: boolean) => dispatch({ type: "SET_FIELD", field: "doseNight", value: val });
+  const setDoseTiming = (val: any) => dispatch({ type: "SET_FIELD", field: "doseTiming", value: val });
+  const setDoseDuration = (val: string) => dispatch({ type: "SET_FIELD", field: "doseDuration", value: val });
+  const setDoseDurationUnit = (val: any) => dispatch({ type: "SET_FIELD", field: "doseDurationUnit", value: val });
+  const setDoseCustomInstructions = (val: string) => dispatch({ type: "SET_FIELD", field: "doseCustomInstructions", value: val });
+
+  // Dictionaries
   const [allDiseases, setAllDiseases] = useState<string[]>([]);
   const [filteredDiseases, setFilteredDiseases] = useState<string[]>([]);
-
-  const [symptoms, setSymptoms] = useState<string[]>([]);
-  const [symptomInput, setSymptomInput] = useState("");
   const [allSymptoms, setAllSymptoms] = useState<string[]>([]);
   const [filteredSymptoms, setFilteredSymptoms] = useState<string[]>([]);
-
-  const [tests, setTests] = useState<string[]>([]);
-  const [testInput, setTestInput] = useState("");
-
-  const [notes, setNotes] = useState("");
-  const [treatmentPlan, setTreatmentPlan] = useState("");
-  const [followUp, setFollowUp] = useState("");
-
-  // ─── Medicines Grid State ─────────────────────────────────────────────────────
-  const [medicines, setMedicines] = useState<Medicine[]>([]);
-  const [medicineName, setMedicineName] = useState("");
   const [allMedicines, setAllMedicines] = useState<string[]>([]);
   const [filteredMedicines, setFilteredMedicines] = useState<string[]>([]);
   const [loadingMedicines, setLoadingMedicines] = useState(false);
-  const [medicineQty, setMedicineQty] = useState("");
-
-  // Structured dosage selections
-  const [doseMorning, setDoseMorning] = useState(false);
-  const [doseAfternoon, setDoseAfternoon] = useState(false);
-  const [doseEvening, setDoseEvening] = useState(false);
-  const [doseNight, setDoseNight] = useState(false);
-  const [doseTiming, setDoseTiming] = useState<"before_food" | "after_food" | "empty_stomach" | "bedtime" | "">("");
-  const [doseDuration, setDoseDuration] = useState("");
-  const [doseDurationUnit, setDoseDurationUnit] = useState<"Days" | "Weeks" | "Months" | "L.S.">("Days");
-  const [doseCustomInstructions, setDoseCustomInstructions] = useState("");
-
   // Template states
   const [customTemplates, setCustomTemplates] = useState<Template[]>([]);
+
+  // Medicine Kits states
+  const [kits, setKits] = useState<{ _id: string; name: string; medicines: string[] }[]>([]);
+  const [loadingKits, setLoadingKits] = useState(false);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Email Sharing Modal
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailInput, setEmailInput] = useState("");
   const [lastSavedPrescriptionId, setLastSavedPrescriptionId] = useState<string | null>(null);
+
+  // ─── SaaS advanced clinical states ──────────────────────────────────────────
+  const [leftTab, setLeftTab] = useState<"history" | "cpoe">("history");
+  const [isVideoCallActive, setIsVideoCallActive] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isCamOff, setIsCamOff] = useState(false);
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
+
+  // Staff notes messenger drawer
+  const [showStaffNotes, setShowStaffNotes] = useState(false);
+  const [staffNoteText, setStaffNoteText] = useState("");
+  const [sentNotes, setSentNotes] = useState<string[]>([]);
+  const [clinicId, setClinicId] = useState<string | null>(null);
+  const socketRef = useRef<ReturnType<typeof io> | null>(null);
+
+  const selectedReport = useMemo(() => {
+    return MOCK_LAB_REPORTS.find((r) => r.id === selectedReportId);
+  }, [selectedReportId, MOCK_LAB_REPORTS]);
+
+  // Connect to socket when clinicId is available
+  useEffect(() => {
+    if (!clinicId) return;
+    const socketUrl = import.meta.env.VITE_API_BASE || "http://localhost:3000";
+    const socket = io(socketUrl, {
+      transports: ["websocket"]
+    });
+
+    socketRef.current = socket;
+
+    socket.on("connect", () => {
+      console.log("Socket connected for Consultation:", socket.id);
+      socket.emit("joinRoom", "clinic:" + clinicId);
+    });
+
+    return () => {
+      socket.emit("leaveRoom", "clinic:" + clinicId);
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [clinicId]);
 
   // ─── Initial Load ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -230,6 +379,10 @@ export default function ConsultationWorkspace() {
           setEmrProfile(res.data.emrProfile);
           setPastPrescriptions(res.data.pastPrescriptions);
           
+          if (res.data.clinicId) {
+            setClinicId(res.data.clinicId);
+          }
+
           // Prefill default email if exists
           if (res.data.patientInfo.email) {
             setEmailInput(res.data.patientInfo.email);
@@ -271,6 +424,22 @@ export default function ConsultationWorkspace() {
       }
     };
     fetchMedicines();
+
+    const fetchKits = async () => {
+      if (!doctorId) return;
+      setLoadingKits(true);
+      try {
+        const res = await api.get(`/api/doctor/kits/${doctorId}`);
+        if (res.data.success) {
+          setKits(res.data.kits || []);
+        }
+      } catch (err) {
+        console.error("Failed to load kits:", err);
+      } finally {
+        setLoadingKits(false);
+      }
+    };
+    fetchKits();
 
     // Load custom templates from localStorage
     try {
@@ -357,8 +526,60 @@ export default function ConsultationWorkspace() {
 
   const handleMedicineSearch = (q: string) => {
     setMedicineName(q);
-    if (!q.trim()) { setFilteredMedicines([]); return; }
-    setFilteredMedicines(allMedicines.filter((m) => m.toLowerCase().includes(q.toLowerCase())).slice(0, 8));
+    if (!q.trim()) {
+      setFilteredMedicines([]);
+      return;
+    }
+
+    const localFiltered = allMedicines.filter((m) =>
+      m.toLowerCase().includes(q.toLowerCase())
+    );
+    setFilteredMedicines(localFiltered.slice(0, 8));
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const res = await api.get(`/api/doctor/search-master-medicines`, {
+          params: { q }
+        });
+        if (res.data.success && Array.isArray(res.data.medicines)) {
+          const masterNames = res.data.medicines.map((m: any) => m.name);
+          const combined = [...new Set([...localFiltered, ...masterNames])];
+          setFilteredMedicines(combined.slice(0, 10));
+        }
+      } catch (err) {
+        console.error("Failed to fetch master medicines:", err);
+      }
+    }, 300);
+  };
+
+  const applyMedicineKit = (kitMedicines: string[]) => {
+    const medsToAdd: Medicine[] = kitMedicines.map((medName) => ({
+      name: medName,
+      dosage: "As directed by doctor",
+      structuredDosage: {
+        morning: false,
+        afternoon: false,
+        evening: false,
+        night: false,
+        timing: "after_food",
+        duration: "5",
+        durationUnit: "Days",
+        customInstructions: ""
+      }
+    }));
+    setMedicines((prev) => [...prev, ...medsToAdd]);
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: "success",
+      title: `Applied kit medicines to prescription!`,
+      showConfirmButton: false,
+      timer: 2000
+    });
   };
 
   const selectMedicine = (name: string) => {
@@ -770,6 +991,45 @@ export default function ConsultationWorkspace() {
     }
   };
 
+
+
+  // Staff note broadcasting channel
+  const handleSendStaffNote = () => {
+    const text = staffNoteText.trim();
+    if (!text) return;
+
+    if (socketRef.current && clinicId) {
+      socketRef.current.emit("doctorStaffNote", {
+        roomId: "clinic:" + clinicId,
+        doctorName: localStorage.getItem("doctorName") || "Doctor",
+        doctorId: doctorId || "",
+        text
+      });
+    }
+
+    setSentNotes((prev) => [...prev, text]);
+    setStaffNoteText("");
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: "success",
+      title: "Note sent to Receptionist Desk!",
+      showConfirmButton: false,
+      timer: 2000
+    });
+  };
+
+  // Video session call timers
+  useEffect(() => {
+    let interval: any;
+    if (isVideoCallActive) {
+      interval = setInterval(() => setVideoDuration((d) => d + 1), 1000);
+    } else {
+      setVideoDuration(0);
+    }
+    return () => clearInterval(interval);
+  }, [isVideoCallActive]);
+
   // ─── Suggestions Formats ─────────────────────────────────────────────────────
   const formattedSymptomSuggestions = useMemo(() => filteredSymptoms.map(fmt), [filteredSymptoms]);
 
@@ -854,6 +1114,20 @@ export default function ConsultationWorkspace() {
             </div>
           </div>
 
+          {/* Video Teleconsult Actions */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsVideoCallActive(!isVideoCallActive)}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-xs cursor-pointer ${
+                isVideoCallActive ? "bg-red-600 hover:bg-red-700 text-white" : "bg-indigo-600 hover:bg-indigo-700 text-white"
+              }`}
+            >
+              <Video className="w-4 h-4" />
+              {isVideoCallActive ? "End Video Consult" : "Start Video Consult"}
+            </button>
+          </div>
+
         </div>
       </div>
 
@@ -895,114 +1169,156 @@ export default function ConsultationWorkspace() {
             </div>
           </div>
 
-          {/* Timeline Feed */}
+          {/* Timeline & Diagnostics Feed */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-xs flex-1 flex flex-col overflow-hidden">
-            <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                <History className="w-4 h-4 text-blue-600" />
-                EMR Timeline & Visit History
-              </h3>
-              <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                {pastPrescriptions.length} visits
-              </span>
+            <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+              <div className="flex bg-gray-200/60 p-0.5 rounded-lg border border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setLeftTab("history")}
+                  className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition cursor-pointer ${leftTab === "history" ? "bg-[#0c213e] text-white shadow-xs" : "text-gray-500 hover:text-gray-800"}`}
+                >
+                  Visit History ({pastPrescriptions.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLeftTab("cpoe")}
+                  className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition cursor-pointer ${leftTab === "cpoe" ? "bg-[#0c213e] text-white shadow-xs" : "text-gray-500 hover:text-gray-800"}`}
+                >
+                  Lab Reports (CPOE)
+                </button>
+              </div>
             </div>
 
-            {/* Search Input for EMR Timeline */}
-            {pastPrescriptions.length > 0 && (
-              <div className="px-4 py-2.5 border-b border-gray-150 bg-white">
-                <div className="relative">
-                  <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-gray-400" />
-                  <input
-                    value={emrSearchQuery}
-                    onChange={(e) => setEmrSearchQuery(e.target.value)}
-                    placeholder="Search EMR diagnosis, medicines..."
-                    className="w-full pl-9 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-gray-50/50"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Scrollable list */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {filteredPastPrescriptions.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center p-6 text-gray-400">
-                  <FileText className="w-12 h-12 stroke-[1.5] mb-2 text-gray-300" />
-                  <p className="text-xs font-semibold">No Matching Clinical Records</p>
-                  <p className="text-[10px] mt-1 text-gray-400">Try adjusting your EMR search query.</p>
-                </div>
-              ) : (
-                filteredPastPrescriptions.map((past) => (
-                  <div key={past._id} className="relative pl-4 border-l-2 border-blue-500/30 last:border-0 pb-1">
-                    {/* timeline node icon */}
-                    <div className="absolute -left-[7px] top-1.5 w-3 h-3 bg-blue-600 rounded-full border-2 border-white shadow-xs" />
-                    
-                    <div className="bg-gray-50/40 hover:bg-gray-50/80 p-3 rounded-xl border border-gray-200 transition-colors">
-                      <div className="flex items-start justify-between gap-2 mb-1.5">
-                        <div>
-                          <span className="text-[11px] font-bold text-blue-700">{formatDate(past.createdAt, past._id)}</span>
-                          <span className="text-[10px] block text-gray-400">Dr. {past.doctorId?.fullName}</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleCopyPrescription(past)}
-                          title="Copy details to current workspace"
-                          className="flex items-center gap-1 px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-bold rounded-md transition"
-                        >
-                          <Copy size={11} /> Copy Rx
-                        </button>
+            {leftTab === "cpoe" ? (
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white">
+                <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">Incoming Lab Investigations:</div>
+                {MOCK_LAB_REPORTS.map((report) => (
+                  <div key={report.id} className="p-3.5 bg-gray-50/50 hover:bg-blue-50/20 border border-gray-200 rounded-xl transition duration-150 relative">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="font-bold text-gray-900 text-xs">{report.name}</h4>
+                        <p className="text-[10px] text-gray-400 mt-0.5">Report Date: {report.date}</p>
                       </div>
-
-                      {/* Clinical info snippets */}
-                      <div className="space-y-1.5 text-xs text-gray-700">
-                        {past.diagnosis && (
-                          <p>
-                            <span className="font-semibold text-gray-800">Diag:</span> {past.diagnosis}
-                          </p>
-                        )}
-                        {past.symptoms && past.symptoms.length > 0 && (
-                          <p>
-                            <span className="font-semibold text-gray-800">Symptoms:</span> {past.symptoms.join(", ")}
-                          </p>
-                        )}
-                        {past.medicines && past.medicines.length > 0 && (
-                          <div>
-                            <span className="font-semibold text-gray-800">Medicines:</span>
-                            <ul className="list-disc pl-4 mt-0.5 text-[11px] text-gray-600">
-                              {past.medicines.map((m, idx) => (
-                                <li key={idx}>
-                                  <strong>{m.name}</strong> - {m.dosage} {m.quantity ? `(${m.quantity})` : ""}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                        {past.recommendedTests && past.recommendedTests.length > 0 && (
-                          <p>
-                            <span className="font-semibold text-gray-800">Tests:</span> {past.recommendedTests.join(", ")}
-                          </p>
-                        )}
-                        {past.treatmentPlan && (
-                          <p>
-                            <span className="font-semibold text-gray-800">Plan:</span> {past.treatmentPlan}
-                          </p>
-                        )}
-                        {past.followUp && (
-                          <p>
-                            <span className="font-semibold text-gray-800">Follow-up:</span> {past.followUp}
-                          </p>
-                        )}
-                      </div>
+                      <span className={`px-2 py-0.5 text-[9px] font-extrabold uppercase rounded border ${report.flag === "warning" ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-emerald-50 text-emerald-700 border-emerald-250"}`}>
+                        {report.status}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-600 bg-white p-2.5 rounded-lg border border-gray-150 mt-3 font-mono leading-relaxed">
+                      {report.value}
+                    </p>
+                    <div className="mt-3 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedReportId(report.id)}
+                        className="inline-flex items-center gap-1 text-[10px] text-blue-700 hover:text-blue-900 font-bold uppercase cursor-pointer"
+                      >
+                        <Eye size={12} /> Preview Report
+                      </button>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <>
+                {/* Search Input for EMR Timeline */}
+                {pastPrescriptions.length > 0 && (
+                  <div className="px-4 py-2.5 border-b border-gray-150 bg-white">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-gray-400" />
+                      <input
+                        value={emrSearchQuery}
+                        onChange={(e) => setEmrSearchQuery(e.target.value)}
+                        placeholder="Search EMR diagnosis, medicines..."
+                        className="w-full pl-9 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-gray-50/50"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Scrollable list */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white">
+                  {filteredPastPrescriptions.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center p-6 text-gray-400">
+                      <FileText className="w-12 h-12 stroke-[1.5] mb-2 text-gray-300" />
+                      <p className="text-xs font-semibold">No Matching Clinical Records</p>
+                      <p className="text-[10px] mt-1 text-gray-400">Try adjusting your EMR search query.</p>
+                    </div>
+                  ) : (
+                    filteredPastPrescriptions.map((past) => (
+                      <div key={past._id} className="relative pl-4 border-l-2 border-blue-500/30 last:border-0 pb-1">
+                        {/* timeline node icon */}
+                        <div className="absolute -left-[7px] top-1.5 w-3 h-3 bg-blue-600 rounded-full border-2 border-white shadow-xs" />
+                        
+                        <div className="bg-gray-50/40 hover:bg-gray-50/80 p-3 rounded-xl border border-gray-200 transition-colors">
+                          <div className="flex items-start justify-between gap-2 mb-1.5">
+                            <div>
+                              <span className="text-[11px] font-bold text-blue-700">{formatDate(past.createdAt, past._id)}</span>
+                              <span className="text-[10px] block text-gray-400">Dr. {past.doctorId?.fullName}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyPrescription(past)}
+                              title="Copy details to current workspace"
+                              className="flex items-center gap-1 px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-bold rounded-md transition cursor-pointer"
+                            >
+                              <Copy size={11} /> Copy Rx
+                            </button>
+                          </div>
+
+                          {/* Clinical info snippets */}
+                          <div className="space-y-1.5 text-xs text-gray-700">
+                            {past.diagnosis && (
+                              <p>
+                                <span className="font-semibold text-gray-800">Diag:</span> {past.diagnosis}
+                              </p>
+                            )}
+                            {past.symptoms && past.symptoms.length > 0 && (
+                              <p>
+                                <span className="font-semibold text-gray-800">Symptoms:</span> {past.symptoms.join(", ")}
+                              </p>
+                            )}
+                            {past.medicines && past.medicines.length > 0 && (
+                              <div>
+                                <span className="font-semibold text-gray-800">Medicines:</span>
+                                <ul className="list-disc pl-4 mt-0.5 text-[11px] text-gray-600">
+                                  {past.medicines.map((m, idx) => (
+                                    <li key={idx}>
+                                      <strong>{m.name}</strong> - {m.dosage} {m.quantity ? `(${m.quantity})` : ""}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {past.recommendedTests && past.recommendedTests.length > 0 && (
+                              <p>
+                                <span className="font-semibold text-gray-800">Tests:</span> {past.recommendedTests.join(", ")}
+                              </p>
+                            )}
+                            {past.treatmentPlan && (
+                              <p>
+                                <span className="font-semibold text-gray-800">Plan:</span> {past.treatmentPlan}
+                              </p>
+                            )}
+                            {past.followUp && (
+                              <p>
+                                <span className="font-semibold text-gray-800">Follow-up:</span> {past.followUp}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
         </div>
 
-        {/* ─── Right Pane: Active Workspace Form (65% Width) ────────────────────── */}
-        <div className="lg:col-span-8 space-y-6">
+        {/* ─── Right Pane: Active Workspace Form ─── */}
+        <div className={`${isVideoCallActive ? "lg:col-span-5" : "lg:col-span-8"} space-y-6`}>
 
           {/* Form Header with Quick templates */}
           <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs">
@@ -1049,6 +1365,31 @@ export default function ConsultationWorkspace() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Medicine Kits Picker */}
+            <div className="mb-4 bg-slate-50 p-4 border border-slate-200/60 rounded-xl">
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                Apply Medicine Kit Preset:
+              </label>
+              {loadingKits ? (
+                <span className="text-xs text-gray-400">Loading medicine kits…</span>
+              ) : kits.length === 0 ? (
+                <span className="text-xs text-gray-400 italic">No medicine kits created. Configure them in the Medicine List page.</span>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {kits.map((kit) => (
+                    <button
+                      key={kit._id}
+                      type="button"
+                      onClick={() => applyMedicineKit(kit.medicines)}
+                      className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold rounded-lg border border-amber-250 transition-colors cursor-pointer"
+                    >
+                      💊 {kit.name} ({kit.medicines.length} drugs)
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Diagnosis & Symptoms Row */}
@@ -1154,7 +1495,7 @@ export default function ConsultationWorkspace() {
                     onChange={(e) => handleMedicineSearch(e.target.value)}
                     placeholder={loadingMedicines ? "Loading..." : "Search medicine name..."}
                     disabled={loadingMedicines}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400/30 focus:border-blue-405 bg-white transition"
                   />
                   {filteredMedicines.length > 0 && (
                     <ul className="absolute left-0 top-full mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto z-50 py-1">
@@ -1178,7 +1519,7 @@ export default function ConsultationWorkspace() {
                     value={medicineQty}
                     onChange={(e) => setMedicineQty(e.target.value)}
                     placeholder="e.g. 10 tabs, 1 bottle"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400/30 focus:border-blue-405 bg-white transition"
                   />
                 </div>
 
@@ -1192,12 +1533,12 @@ export default function ConsultationWorkspace() {
                       onChange={(e) => setDoseDuration(e.target.value)}
                       placeholder="No."
                       min="1"
-                      className="w-16 border border-gray-300 rounded-lg px-2 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-center transition"
+                      className="w-16 border border-gray-200 rounded-lg px-2 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400/30 focus:border-blue-405 bg-white text-center transition"
                     />
                     <select
                       value={doseDurationUnit}
                       onChange={(e) => setDoseDurationUnit(e.target.value as any)}
-                      className="flex-1 border border-gray-300 rounded-lg px-2.5 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition"
+                      className="flex-1 border border-gray-200 rounded-lg px-2.5 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400/30 focus:border-blue-405 bg-white transition"
                     >
                       <option value="Days">Days</option>
                       <option value="Weeks">Weeks</option>
@@ -1268,7 +1609,7 @@ export default function ConsultationWorkspace() {
                     value={doseCustomInstructions}
                     onChange={(e) => setDoseCustomInstructions(e.target.value)}
                     placeholder="e.g. Dissolve in half glass water, take with milk..."
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400/30 focus:border-blue-405 bg-white transition"
                   />
                 </div>
                 <button
@@ -1400,8 +1741,79 @@ export default function ConsultationWorkspace() {
             </div>
 
           </div>
-
         </div>
+
+        {/* Live Video Consultation side panel */}
+        {isVideoCallActive && (
+          <div className="lg:col-span-3 bg-white border border-gray-200 rounded-2xl p-4 shadow-xs flex flex-col gap-4 animate-fadeIn relative h-[calc(100vh-160px)] lg:sticky lg:top-28">
+            <div className="border-b border-gray-150 pb-3 flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-indigo-700 font-bold text-xs uppercase">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping inline-block" />
+                <span>Live Video Consult</span>
+              </div>
+              <span className="text-xs bg-gray-100 px-2.5 py-0.5 rounded text-gray-600 font-mono font-bold">
+                {Math.floor(videoDuration / 60).toString().padStart(2, "0")}:{(videoDuration % 60).toString().padStart(2, "0")}
+              </span>
+            </div>
+
+            {/* Video stream box */}
+            <div className="flex-1 bg-slate-900 rounded-xl relative overflow-hidden flex items-center justify-center border border-slate-950 min-h-[220px]">
+              {isCamOff ? (
+                <div className="text-center text-slate-500">
+                  <CameraOff className="w-12 h-12 mx-auto stroke-[1.2] mb-1" />
+                  <p className="text-[10px]">Camera Paused</p>
+                </div>
+              ) : (
+                <div className="w-full h-full relative">
+                  <div className="absolute inset-0 bg-gradient-to-b from-slate-800 to-slate-950 flex flex-col items-center justify-center p-6 text-center">
+                    <User className="w-14 h-14 text-blue-200/30 stroke-[1.2] mb-2 animate-bounce" />
+                    <p className="text-xs text-white font-bold capitalize">{patientInfo.name}</p>
+                    <p className="text-[9px] text-emerald-400 mt-1 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      Stream Connected (30fps)
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Local Doctor PIP Feed */}
+              <div className="absolute bottom-3 right-3 w-16 h-24 bg-slate-800 border border-slate-700 rounded-lg overflow-hidden shadow-md flex items-center justify-center">
+                <User className="w-5 h-5 text-slate-600 stroke-[1.2]" />
+                <span className="absolute bottom-1 right-1 text-[7px] bg-black/60 text-white px-1 rounded font-bold">You</span>
+              </div>
+            </div>
+
+            {/* Video Controls */}
+            <div className="flex justify-center gap-3 py-2 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setIsMuted(!isMuted)}
+                className={`p-2 rounded-xl border transition cursor-pointer ${isMuted ? "bg-red-50 text-red-600 border-red-255" : "bg-gray-50 text-gray-600 border-gray-250 hover:bg-gray-100"}`}
+                title={isMuted ? "Unmute Mic" : "Mute Mic"}
+              >
+                {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsCamOff(!isCamOff)}
+                className={`p-2 rounded-xl border transition cursor-pointer ${isCamOff ? "bg-red-50 text-red-600 border-red-255" : "bg-gray-50 text-gray-600 border-gray-250 hover:bg-gray-100"}`}
+                title={isCamOff ? "Turn On Camera" : "Turn Off Camera"}
+              >
+                {isCamOff ? <CameraOff className="w-4 h-4" /> : <Camera className="w-4 h-4" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsVideoCallActive(false)}
+                className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-xs transition cursor-pointer"
+                title="Hang Up"
+              >
+                <PhoneOff className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
 
       </div>
 
@@ -1499,6 +1911,133 @@ export default function ConsultationWorkspace() {
           </div>
         </div>
       )}
+      {/* ─── Lab Investigation Detailed Preview Modal ─── */}
+      {selectedReport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white w-full max-w-lg rounded-2xl p-6 shadow-2xl border border-gray-150 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h3 className="text-base font-bold text-gray-900">{selectedReport.name}</h3>
+                <p className="text-[10px] text-gray-400 mt-0.5">Investigation Date: {selectedReport.date}</p>
+              </div>
+              <button onClick={() => setSelectedReportId(null)} className="text-gray-400 hover:text-gray-600">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 font-mono text-xs text-slate-800 leading-relaxed max-h-96 overflow-y-auto">
+              <div className="border-b border-slate-200 pb-2 text-[10px] uppercase font-bold text-slate-400 tracking-wider">Parameters & Findings:</div>
+              <div className="space-y-1">
+                <p className="font-semibold">{selectedReport.value}</p>
+                <p className="text-slate-500 text-[11px] mt-2 italic">*This report was electronically signed and synced via Hospital CPOE system.</p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setSelectedReportId(null)}
+                className="px-5 py-2 bg-[#0c213e] hover:bg-blue-900 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Staff Notes Floating Broadcast Panel ─── */}
+      <div className="fixed bottom-24 right-6 z-40">
+        <button
+          type="button"
+          onClick={() => setShowStaffNotes(!showStaffNotes)}
+          className="w-12 h-12 bg-[#0c213e] hover:bg-blue-900 text-white rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-105 cursor-pointer relative"
+          title="Staff notes & reception channel"
+        >
+          <MessageSquare className="w-5 h-5" />
+          {sentNotes.length > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white animate-bounce">
+              {sentNotes.length}
+            </span>
+          )}
+        </button>
+
+        {showStaffNotes && (
+          <div className="absolute right-0 bottom-14 w-80 bg-white border border-gray-200 rounded-2xl shadow-2xl p-4 space-y-4 animate-fadeIn font-[Poppins] text-gray-800">
+            <div className="border-b border-gray-150 pb-2 flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Reception Messenger</span>
+              <button type="button" onClick={() => setShowStaffNotes(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              <textarea
+                value={staffNoteText}
+                onChange={(e) => setStaffNoteText(e.target.value)}
+                placeholder="Broadcast a note to front desk..."
+                rows={2}
+                className="w-full border border-gray-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none placeholder-gray-400 bg-white"
+              />
+              <button
+                type="button"
+                onClick={handleSendStaffNote}
+                className="w-full bg-[#0c213e] hover:bg-blue-900 text-white py-1.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+              >
+                <Send className="w-3.5 h-3.5" /> Broadcast Note
+              </button>
+            </div>
+
+            {/* Quick Notes Templates */}
+            <div>
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Quick Actions:</span>
+              <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                <button
+                  type="button"
+                  onClick={() => setStaffNoteText("Send the next patient in")}
+                  className="bg-gray-50 hover:bg-gray-100 text-gray-750 py-1.5 px-2 rounded-lg border border-gray-200 text-left font-medium transition cursor-pointer"
+                >
+                  Send next patient
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStaffNoteText("Collect consulting fee of ₹500 for current patient")}
+                  className="bg-gray-50 hover:bg-gray-100 text-gray-750 py-1.5 px-2 rounded-lg border border-gray-200 text-left font-medium transition cursor-pointer"
+                >
+                  Collect fees
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStaffNoteText("Escort patient to the clinical pharmacy")}
+                  className="bg-gray-50 hover:bg-gray-100 text-gray-750 py-1.5 px-2 rounded-lg border border-gray-200 text-left font-medium transition cursor-pointer"
+                >
+                  Direct to Pharmacy
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStaffNoteText("Escort patient to the blood sample lab")}
+                  className="bg-gray-50 hover:bg-gray-100 text-gray-750 py-1.5 px-2 rounded-lg border border-gray-200 text-left font-medium transition cursor-pointer"
+                >
+                  Send to Lab
+                </button>
+              </div>
+            </div>
+
+            {sentNotes.length > 0 && (
+              <div className="space-y-1.5 pt-2 border-t border-gray-100">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">Sent History (Today):</span>
+                <div className="max-h-24 overflow-y-auto space-y-1">
+                  {sentNotes.map((note, idx) => (
+                    <div key={idx} className="bg-blue-50/50 p-2 rounded text-[10px] text-blue-900 border border-blue-100 font-medium">
+                      {note}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
     </div>
   );
