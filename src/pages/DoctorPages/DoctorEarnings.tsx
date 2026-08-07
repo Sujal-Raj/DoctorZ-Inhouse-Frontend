@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { DollarSign, Calendar, Users, RefreshCw, Layers, CheckCircle, TrendingUp } from "lucide-react";
+import { IndianRupee, Calendar, Users, RefreshCw, Layers, CheckCircle, TrendingUp } from "lucide-react";
 import api from "../../Services/mainApi";
 import toast from "react-hot-toast";
+import Cookies from "js-cookie";
 
 interface Booking {
   _id: string;
@@ -46,7 +47,7 @@ const DoctorEarnings: React.FC = () => {
   // Fetch Doctor Clinics
   const fetchDoctorProfile = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = Cookies.get("doctorToken");
       const res = await api.get(`/api/doctor/${drId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -62,7 +63,7 @@ const DoctorEarnings: React.FC = () => {
   const fetchEarnings = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = Cookies.get("doctorToken");
       const query = selectedPractice !== "all" ? `?clinicId=${selectedPractice}` : "";
       const res = await api.get(`/api/revenue/doctor/${drId}${query}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -142,11 +143,11 @@ const DoctorEarnings: React.FC = () => {
         {/* Total Earnings */}
         <div className="bg-gradient-to-br from-[#0c213e] to-[#1d4475] p-6 rounded-2xl text-white shadow-md relative overflow-hidden">
           <div className="absolute right-0 bottom-0 translate-x-3 translate-y-3 opacity-10">
-            <DollarSign className="w-36 h-36" />
+            <IndianRupee className="w-36 h-36" />
           </div>
           <div className="flex items-center gap-3 mb-2">
             <div className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center">
-              <DollarSign className="w-5 h-5 text-blue-200" />
+              <IndianRupee className="w-5 h-5 text-blue-200" />
             </div>
             <span className="text-xs font-semibold text-blue-200 uppercase tracking-wide">Total Earnings</span>
           </div>

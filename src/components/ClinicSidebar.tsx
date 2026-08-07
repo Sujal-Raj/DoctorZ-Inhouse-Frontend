@@ -20,9 +20,7 @@ import {
   ReceiptText, 
   Wrench, 
   Truck, 
-  MessageSquare,
-  ChevronLeft,
-  ChevronRight
+  MessageSquare
 } from "lucide-react";
 
 interface MenuItem {
@@ -42,10 +40,8 @@ const ClinicSidebar: React.FC = () => {
 
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   const [isDesktop, setIsDesktop] = useState<boolean>(window.innerWidth >= 768);
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
-    const saved = localStorage.getItem("clinic_sidebar_collapsed");
-    return saved !== "false";
-  });
+  const [isHovered, setIsHovered] = useState<boolean>(false);
+  const isVisualCollapsed = !isHovered;
 
   // Detect window resize
   useEffect(() => {
@@ -255,7 +251,7 @@ const ClinicSidebar: React.FC = () => {
     }))
     .filter(group => group.items.length > 0);
 
-  const sidebarWidth = isDesktop ? (isCollapsed ? "w-20" : "w-72") : "w-72";
+  const sidebarWidth = isDesktop ? (isVisualCollapsed ? "w-20" : "w-72") : "w-72";
 
   return (
     <>
@@ -286,6 +282,8 @@ const ClinicSidebar: React.FC = () => {
 
       {/* ---------- SIDEBAR ---------- */}
       <aside
+        onMouseEnter={() => isDesktop && setIsHovered(true)}
+        onMouseLeave={() => isDesktop && setIsHovered(false)}
         className={`
           bg-white border-r border-gray-200
           fixed md:relative
@@ -299,14 +297,14 @@ const ClinicSidebar: React.FC = () => {
         `}
       >
         {/* Desktop Title / Logo */}
-        <div className={`hidden md:flex items-center border-b border-gray-200 py-5 ${isCollapsed ? "justify-center px-4" : "gap-3 px-6"}`}>
+        <div className={`hidden md:flex items-center border-b border-gray-200 py-5 ${isVisualCollapsed ? "justify-center px-4" : "gap-3 px-6"}`}>
           <div className="w-10 h-10 bg-[#0c213e] rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
             <Building2 className="w-5 h-5 text-white" />
           </div>
-          {!isCollapsed && (
+          {!isVisualCollapsed && (
             <div className="overflow-hidden transition-all duration-300">
-              <h2 className="text-lg font-bold text-gray-900 whitespace-nowrap">DoctorZ</h2>
-              <p className="text-xs text-gray-700 whitespace-nowrap">Clinic Dashboard</p>
+               <h2 className="text-lg font-bold text-gray-900 whitespace-nowrap">DoctorZ</h2>
+               <p className="text-xs text-gray-700 whitespace-nowrap">Clinic Dashboard</p>
             </div>
           )}
         </div>
@@ -317,7 +315,7 @@ const ClinicSidebar: React.FC = () => {
             {filteredGroups.map((group) => (
               <div key={group.groupName} className="space-y-1">
                 {/* Group Title or Divider */}
-                {!isCollapsed ? (
+                {!isVisualCollapsed ? (
                   <h3 className="px-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 mt-4 first:mt-0">
                     {group.groupName}
                   </h3>
@@ -347,7 +345,7 @@ const ClinicSidebar: React.FC = () => {
                       className={`
                         flex transition-all relative group cursor-pointer
                         ${
-                          isCollapsed 
+                          isVisualCollapsed 
                             ? "flex-col items-center justify-center p-2 rounded-xl gap-1 text-center" 
                             : "flex-row items-center gap-3 px-4 py-3 rounded-xl"
                         }
@@ -366,7 +364,7 @@ const ClinicSidebar: React.FC = () => {
                         {item.icon}
                       </span>
                       
-                      {!isCollapsed ? (
+                      {!isVisualCollapsed ? (
                         <span className="font-medium text-sm whitespace-nowrap opacity-100 transition-opacity duration-200">
                           {item.name}
                         </span>
@@ -376,7 +374,7 @@ const ClinicSidebar: React.FC = () => {
                         </span>
                       )}
 
-                      {isActive && !isCollapsed && (
+                      {isActive && !isVisualCollapsed && (
                         <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full"></div>
                       )}
                     </Link>
@@ -387,43 +385,20 @@ const ClinicSidebar: React.FC = () => {
           </div>
         </nav>
 
-        {/* Toggle Button for Desktop */}
-        {isDesktop && (
-          <div className="p-4 border-t border-gray-200">
-            <button
-              onClick={() => {
-                const newState = !isCollapsed;
-                setIsCollapsed(newState);
-                localStorage.setItem("clinic_sidebar_collapsed", String(newState));
-              }}
-              className={`p-2 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors w-full flex items-center border border-gray-100 cursor-pointer ${
-                isCollapsed ? "justify-center" : "justify-start gap-3 px-4"
-              }`}
-            >
-              {isCollapsed ? (
-                <ChevronRight className="w-5 h-5" />
-              ) : (
-                <>
-                  <ChevronLeft className="w-5 h-5" />
-                  <span className="text-sm font-medium">Collapse Menu</span>
-                </>
-              )}
-            </button>
-          </div>
-        )}
+
 
         {/* Logout Button */}
         <div className="p-4 border-t border-gray-200">
           <button
             onClick={handleLogout}
             className={`flex items-center rounded-xl bg-red-50 hover:bg-red-100 transition-all text-red-600 w-full group relative cursor-pointer ${
-              isCollapsed ? "justify-center p-3" : "gap-3 px-4 py-3"
+              isVisualCollapsed ? "justify-center p-3" : "gap-3 px-4 py-3"
             }`}
           >
             <LogOut className="w-5 h-5 flex-shrink-0" />
-            {!isCollapsed && <span className="font-medium text-sm">Logout</span>}
+            {!isVisualCollapsed && <span className="font-medium text-sm">Logout</span>}
             
-            {isCollapsed && (
+            {isVisualCollapsed && (
               <span className="absolute left-full ml-4 px-3 py-2 bg-red-600 text-white text-xs font-semibold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-2 group-hover:translate-x-0 pointer-events-none whitespace-nowrap z-50">
                 Logout
               </span>

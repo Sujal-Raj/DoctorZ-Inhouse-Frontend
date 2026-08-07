@@ -1,6 +1,8 @@
 // 📁 ReceptionistHome.tsx
 import { useEffect, useState, useRef } from "react";
 import api from "../../Services/mainApi";
+import io from "socket.io-client";
+import Swal from "sweetalert2";
 import {
   CalendarDays,
   Users,
@@ -32,7 +34,7 @@ interface Doctor {
 interface Patient {
   bookingId: string;
   tokenNumber?: number;
-  doctor: { fullName: string; specialization: string };
+  doctor: { _id: string; fullName: string; specialization: string };
   patient: string;
   mode: string;
   bookedBy: string;
@@ -93,6 +95,59 @@ export default function ReceptionistHome() {
   const [search, setSearch]             = useState("");
 
   const customInputRef = useRef<HTMLInputElement>(null);
+
+  const [incomingNotes, setIncomingNotes] = useState<{ doctorName: string; text: string; time: string }[]>([]);
+  const [doctorStatuses, setDoctorStatuses] = useState<Record<string, "active" | "paused" | "blocked">>({});
+  const socketRef = useRef<ReturnType<typeof io> | null>(null);
+
+  useEffect(() => {
+    const clinicId = localStorage.getItem("clinicId");
+    if (!clinicId) return;
+
+    const socketUrl = import.meta.env.VITE_API_BASE || "http://localhost:3000";
+    const socket = io(socketUrl, {
+      transports: ["websocket"]
+    });
+
+    socketRef.current = socket;
+
+    socket.on("connect", () => {
+      console.log("Receptionist Socket connected:", socket.id);
+      socket.emit("joinRoom", "clinic:" + clinicId);
+    });
+
+    socket.on("staffNoteReceived", (data: { doctorName: string; text: string }) => {
+      const nowTime = new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+      setIncomingNotes((prev) => [
+        { doctorName: data.doctorName, text: data.text, time: nowTime },
+        ...prev
+      ].slice(0, 10));
+
+      Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "warning",
+        title: `Message from Dr. ${data.doctorName}`,
+        text: data.text,
+        showConfirmButton: true,
+        confirmButtonColor: "#0c213e",
+        timer: 10000
+      });
+    });
+
+    socket.on("queueStatusReceived", (data: { doctorId: string; status: "active" | "paused" | "blocked" }) => {
+      setDoctorStatuses((prev) => ({
+        ...prev,
+        [data.doctorId]: data.status
+      }));
+    });
+
+    return () => {
+      socket.emit("leaveRoom", "clinic:" + clinicId);
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, []);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -315,6 +370,35 @@ export default function ReceptionistHome() {
         })}
       </div>
 
+      {/* ─── Doctor real-time notifications ticker ─────────────────────────── */}
+      {incomingNotes.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2.5 animate-fadeIn">
+          <div className="flex items-center justify-between border-b border-amber-200/50 pb-1.5">
+            <span className="text-xs font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
+              <AlertCircle className="w-4 h-4 text-amber-600" />
+              Live Alerts from consulting rooms ({incomingNotes.length})
+            </span>
+            <button
+              onClick={() => setIncomingNotes([])}
+              className="text-[10px] text-amber-700 hover:text-amber-900 font-bold hover:underline cursor-pointer"
+            >
+              Clear Log
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-40 overflow-y-auto">
+            {incomingNotes.map((note, idx) => (
+              <div key={idx} className="bg-white border border-amber-100 p-3 rounded-lg shadow-2xs flex justify-between items-start gap-2">
+                <div>
+                  <span className="font-bold text-xs text-amber-900">Dr. {note.doctorName}</span>
+                  <p className="text-xs text-gray-750 mt-1">{note.text}</p>
+                </div>
+                <span className="text-[10px] text-gray-400 font-medium shrink-0">{note.time}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Full-width Appointments */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
 
@@ -532,8 +616,19 @@ export default function ReceptionistHome() {
 
                       {/* Doctor */}
                       <td className="px-5 py-3">
-                        <p className="text-sm text-gray-700">{item.doctor?.fullName ?? "—"}</p>
-                        <p className="text-xs text-gray-400">{item.doctor?.specialization}</p>
+                        <div className="flex items-center gap-2">
+                          <div>
+                            <p className="text-sm text-gray-700 font-medium">{item.doctor?.fullName ?? "—"}</p>
+                            <p className="text-xs text-gray-400">{item.doctor?.specialization}</p>
+                          </div>
+                          {item.doctor && doctorStatuses[item.doctor._id] && doctorStatuses[item.doctor._id] !== "active" && (
+                            <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase border tracking-wider shrink-0 ${
+                              doctorStatuses[item.doctor._id] === "paused" ? "bg-amber-50 text-amber-600 border-amber-250 animate-pulse" : "bg-red-50 text-red-600 border-red-250"
+                            }`}>
+                              {doctorStatuses[item.doctor._id] === "paused" ? "Paused" : "Blocked"}
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Mode */}

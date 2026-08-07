@@ -11,7 +11,7 @@ import Layout from './Layout';
 import DoctorDashboard from './pages/DoctorPages/DoctorDashboard';
 import DoctorAppointments from './pages/DoctorPages/DoctorAppointments';
 import DoctorDashboardHome from './pages/DoctorPages/DoctorHomeDashboard';
-import PrescriptionForm from './pages/DoctorPages/PrescriptionForm';
+import ConsultationWorkspace from './pages/DoctorPages/ConsultationWorkspace';
 import DoctorProfile from './pages/DoctorPages/DoctorProfile';
 import DoctorNotifications from './pages/DoctorPages/DoctorNotifications';
 import AddMedicine from './pages/DoctorPages/AddMedicine';
@@ -19,7 +19,7 @@ import AllPatient from './pages/DoctorPages/AllPatient';
 import OfflinePatientDetails from './pages/DoctorPages/OfflinePatientDetails';
 import TimeSlots from './pages/TimeSlots';
 import EditDoctorProfile from './pages/EditDoctorProfile';
-import PatientEMR from './pages/PatientEMR';
+import PatientEMR from './pages/DoctorPages/PatientEMR';
 import LabDashboard from './pages/LabPages/LabDashboard';
 import Patients from './pages/LabPages/LabPatients';
 import LabProfile from './pages/LabPages/LabProfile';
@@ -101,7 +101,7 @@ function App() {
             /> */}
             <Route
   path="appointments/addPrescription/:bookingId/:patientAadhar?"
-  element={<PrescriptionForm />}
+  element={<ConsultationWorkspace />}
 />
             <Route path="time-slots" element={<TimeSlots />} />
             <Route path="patients" element={<AllPatient />} />

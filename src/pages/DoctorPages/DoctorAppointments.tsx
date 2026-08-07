@@ -1,17 +1,13 @@
-import { useEffect, useState } from "react";
-
-import {
-  CalendarDaysIcon,
-  CurrencyRupeeIcon,
-  ClockIcon,
-  UserIcon,
-  CheckIcon,
-  HashtagIcon,
-  BuildingStorefrontIcon,
-  VideoCameraIcon,
-} from "@heroicons/react/24/solid";
+import { useEffect, useState, useMemo, useRef } from "react";
+import { 
+  Search, Users, CheckCircle, Clock, AlertCircle,
+  ArrowRight, RefreshCw, Check, Video, MapPin, Hash, IndianRupee,
+  Play, Pause, Power, Printer, Lock
+} from "lucide-react";
 import api from "../../Services/mainApi";
 import { useLocation, useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
+import io from "socket.io-client";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -29,7 +25,8 @@ interface OnlineBooking {
   dateTime: string;
   fees: number;
   mode: "online" | "offline";
-  status: "pending" | "completed";
+  status: string;
+  clinicId?: any;
 }
 
 interface OfflineUser {
@@ -40,15 +37,25 @@ interface OfflineUser {
   aadhar?: string;
 }
 
+interface OfflinePatientData {
+  name?: string;
+  age?: number;
+  gender?: "Male" | "Female" | "Other";
+  aadhar?: string;
+  contact?: string;
+}
+
 interface OfflineBooking {
   _id: string;
   userId?: OfflineUser;
+  patient?: OfflinePatientData;
   bookedBy?: string;
   date: string;          // "YYYY-MM-DD"
   tokenNumber: number;
   fees: number;
-  status: "pending" | "completed" | "cancelled";
+  status: string;
   paid: boolean;
+  clinicId?: any;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -92,226 +99,19 @@ const savePrescribedBookingIds = (ids: string[]) => {
 
 const StatusBadge = ({ status }: { status: string }) => {
   const styles: Record<string, string> = {
-    pending: "bg-yellow-100 text-yellow-800",
-    completed: "bg-green-100 text-green-800",
-    cancelled: "bg-red-100 text-red-800",
+    pending: "bg-amber-50 text-amber-700 border-amber-250",
+    completed: "bg-emerald-50 text-emerald-700 border-emerald-250",
+    cancelled: "bg-red-50 text-red-700 border-red-250",
+    waiting: "bg-blue-50 text-blue-700 border-blue-250",
+    "in-consultation": "bg-purple-50 text-purple-700 border-purple-250",
+    registered: "bg-gray-50 text-gray-700 border-gray-250"
   };
   return (
-    <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold capitalize ${styles[status] ?? "bg-gray-100 text-gray-700"}`}>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border ${styles[status] ?? "bg-gray-50 text-gray-700 border-gray-250"}`}>
       {status}
     </span>
   );
 };
-
-// ─── Online booking card ──────────────────────────────────────────────────────
-
-const OnlineBookingCard = ({
-  b,
-  onComplete,
-  onPrescription,
-  completing,
-  prescribed,
-}: {
-  b: OnlineBooking;
-  onComplete: (id: string) => void;
-  onPrescription: (b: OnlineBooking) => void;
-  completing:boolean;
-  prescribed:boolean;
-}) => {
-  const dateObj = new Date(b.dateTime);
-  const formattedDate = dateObj.toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
-  const formattedTime = dateObj.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-
-  return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition flex flex-col gap-3">
-      {/* Mode chip */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full text-xs font-semibold w-fit">
-          <VideoCameraIcon className="w-3.5 h-3.5" />
-          Online
-        </div>
-        <StatusBadge status={b.status} />
-      </div>
-
-      {/* Patient */}
-      <div>
-        <div className="flex items-center gap-2">
-          <UserIcon className="text-gray-500 w-5 h-5" />
-          <h3 className="text-base font-semibold text-gray-900 capitalize">{b.patient?.name}</h3>
-        </div>
-        <p className="text-gray-500 text-sm ml-7">{b.patient?.age} yrs • {b.patient?.gender}</p>
-        <p className="text-gray-500 text-sm ml-7">Contact: {b.patient?.contact}</p>
-      </div>
-
-      {/* Appointment details */}
-      <div className="text-sm text-gray-600 space-y-1.5">
-        <p className="flex items-center gap-2">
-          <CalendarDaysIcon className="w-4 h-4 text-gray-400 shrink-0" />
-          {formattedDate}
-        </p>
-        <p className="flex items-center gap-2">
-          <ClockIcon className="w-4 h-4 text-gray-400 shrink-0" />
-          {formattedTime}
-        </p>
-        <p className="flex items-center gap-2">
-          <CurrencyRupeeIcon className="w-4 h-4 text-gray-400 shrink-0" />
-          ₹{b.fees}
-        </p>
-      </div>
-
-      {/* Actions */}
-      <div className="flex flex-col gap-2 mt-auto">
-        {b.status === "pending" && (
-          // <button
-          //   onClick={() => onComplete(b._id)}
-          //   className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg text-sm font-medium transition"
-          // >
-          //   <CheckIcon className="w-4 h-4" />
-          //   Complete Appointment
-          // </button>
-          <button
-  onClick={() => onComplete(b._id)}
-  disabled={completing}
-  className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 disabled:bg-green-400 disabled:cursor-not-allowed text-white py-2 rounded-lg text-sm font-medium transition"
->
-  {completing ? "Completing..." : (
-    <>
-      <CheckIcon className="w-4 h-4" />
-      Complete Appointment
-    </>
-  )}
-</button>
-        )}
-        <button
-          onClick={() => onPrescription(b)}
-          disabled={prescribed}
-          className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-2 rounded-lg text-sm font-medium transition"
-        >
-          {prescribed ? "Prescription Done" : "Give Prescription"}
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// ─── Offline booking card ─────────────────────────────────────────────────────
-
-const OfflineBookingCard = ({
-  b,
-  onComplete,
-  onPrescription,
-  completing,
-  prescribed,
-}: {
-  b: OfflineBooking;
-  onComplete: (id: string) => void;
-  onPrescription: (b: OfflineBooking) => void;
-  completing:boolean;
-  prescribed:boolean;
-}) => {
-  const formattedDate = new Date(b.date).toLocaleDateString("en-IN", {
-    day: "2-digit", month: "long", year: "numeric",
-  });
-
-  return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition flex flex-col gap-3">
-      {/* Mode chip */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 bg-orange-50 text-orange-700 px-2.5 py-1 rounded-full text-xs font-semibold w-fit">
-          <BuildingStorefrontIcon className="w-3.5 h-3.5" />
-          Walk-in
-        </div>
-        <StatusBadge status={b.status} />
-      </div>
-
-      {/* Patient */}
-      <div>
-        <div className="flex items-center gap-2">
-          <UserIcon className="text-gray-500 w-5 h-5" />
-          <h3 className="text-base font-semibold text-gray-900 capitalize">{b.userId?.fullName ?? "Walk-in Patient"}</h3>
-        </div>
-        <p className="text-gray-500 text-sm ml-7 capitalize">{b.userId?.dob ? `${new Date().getFullYear() - new Date(b.userId.dob).getFullYear()} yrs • ` : ""}
-{b.userId?.gender ?? ""}</p>
-<p className="text-gray-500 text-sm ml-7">
-  📞{b.userId?.mobileNumber ?? "No mobile number"}
-</p>
-        <p className="text-gray-500 text-sm ml-7 capitalize">BookedBy: {b.bookedBy ?? "Reception"}</p>
-      </div>
-
-      {/* Appointment details */}
-      <div className="text-sm text-gray-600 space-y-1.5">
-        <p className="flex items-center gap-2">
-          <CalendarDaysIcon className="w-4 h-4 text-gray-400 shrink-0" />
-          {formattedDate}
-        </p>
-        <p className="flex items-center gap-2">
-          <HashtagIcon className="w-4 h-4 text-gray-400 shrink-0" />
-          Token No. <span className="font-bold text-[#0c213e]">#{b.tokenNumber}</span>
-        </p>
-        <p className="flex items-center gap-2">
-          <CurrencyRupeeIcon className="w-4 h-4 text-gray-400 shrink-0" />
-          ₹{b.fees}
-        </p>
-      </div>
-
-      {/* Actions */}
-      {b.status === "pending" && (
-        <div className="mt-auto">
-          {/* <button
-            onClick={() => onComplete(b._id)}
-            className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg text-sm font-medium transition"
-          >
-            <CheckIcon className="w-4 h-4" />
-            Complete Appointment
-          </button> */}
-          <button
-  onClick={() => onComplete(b._id)}
-  disabled={completing}
-  className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 disabled:bg-green-400 disabled:cursor-not-allowed text-white py-2 rounded-lg text-sm font-medium transition"
->
-  {completing ? "Completing..." : (
-    <>
-      <CheckIcon className="w-4 h-4" />
-      Complete Appointment
-    </>
-  )}
-</button>
-          <button
-            onClick={() => onPrescription(b)}
-            disabled={prescribed}
-            className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-2 rounded-lg text-sm font-medium transition mt-2"
-          >
-            {prescribed ? "Prescription Done" : "Give Prescription"}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ─── Section group renderer ───────────────────────────────────────────────────
-
-function SectionGroup<T,>({
-  title,
-  list,
-  renderCard,
-}: {
-  title: string;
-  list: T[];
-  renderCard: (item: T) => React.ReactNode;
-}) {
-  if (list.length === 0) return null;
-  return (
-    <div className="mb-8">
-      <h3 className="text-2xl font-bold text-gray-700 mb-4">{title}</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 w-full">
-        {list.map((item) => renderCard(item))}
-      </div>
-    </div>
-  );
-}
-
-// ─── Main component ───────────────────────────────────────────────────────────
 
 export default function DoctorAppointments() {
   const [onlineBookings, setOnlineBookings] = useState<OnlineBooking[]>([]);
@@ -320,12 +120,23 @@ export default function DoctorAppointments() {
   const [loading, setLoading] = useState(true);
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [prescribedIds, setPrescribedIds] = useState<string[]>(() => getPrescribedBookingIds());
+  
+  // Filters
+  const [searchTerm, setSearchTerm] = useState("");
+  const [queueSubTab, setQueueSubTab] = useState<"active" | "upcoming" | "history">("active");
+  const [clinicId, setClinicId] = useState<string | null>(null);
+  const socketRef = useRef<ReturnType<typeof io> | null>(null);
+  
+  // Doctor Queue Block Status
+  const [queueStatus, setQueueStatus] = useState<"active" | "paused" | "blocked">(() => {
+    return (localStorage.getItem("doctorQueueStatus") as any) || "active";
+  });
 
   const doctorId = localStorage.getItem("doctorId");
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ── Fetch ──────────────────────────────────────────────────────────────────
+  // ─── Fetch ──────────────────────────────────────────────────────────────────
 
   const fetchOnlineBookings = async () => {
     if (!doctorId) return;
@@ -335,17 +146,23 @@ export default function DoctorAppointments() {
       );
       
       if (data.bookings?.length > 0) {
+        const firstWithClinic = data.bookings.find((b: any) => b.clinicId);
+        if (firstWithClinic && firstWithClinic.clinicId) {
+          setClinicId(typeof firstWithClinic.clinicId === "string" ? firstWithClinic.clinicId : firstWithClinic.clinicId._id || firstWithClinic.clinicId);
+        }
+
         const { today, startOfWeek, endOfWeek } = getWeekBounds();
 
         const todayList = data.bookings.filter(
-          (b) => new Date(b.dateTime).toDateString() === today.toDateString()
+          (b) => b.dateTime && new Date(b.dateTime).toDateString() === today.toDateString()
         );
         const weekList = data.bookings.filter((b) => {
+          if (!b.dateTime) return false;
           const d = new Date(b.dateTime);
           return d.toDateString() !== today.toDateString() && d >= startOfWeek && d <= endOfWeek;
         });
         const upcomingList = data.bookings.filter(
-          (b) => new Date(b.dateTime) > endOfWeek
+          (b) => b.dateTime && new Date(b.dateTime) > endOfWeek
         );
 
         const getD = (b: OnlineBooking) => new Date(b.dateTime);
@@ -369,8 +186,12 @@ export default function DoctorAppointments() {
       const { data } = await api.get<{ bookings: OfflineBooking[] }>(
         `/api/bookOffline/doctor/${doctorId}`
       );
-      console.log(data)
       if (data.bookings?.length > 0) {
+        const firstWithClinic = data.bookings.find((b: any) => b.clinicId);
+        if (firstWithClinic && firstWithClinic.clinicId) {
+          setClinicId(typeof firstWithClinic.clinicId === "string" ? firstWithClinic.clinicId : firstWithClinic.clinicId._id || firstWithClinic.clinicId);
+        }
+
         setOfflineBookings(
           sortByDate(data.bookings, (b) => new Date(b.date))
         );
@@ -405,16 +226,23 @@ export default function DoctorAppointments() {
     });
   }, [location.state]);
 
-  // ── Status updates ─────────────────────────────────────────────────────────
+  // ─── Status updates ─────────────────────────────────────────────────────────
 
   const completeOnline = async (id: string) => {
     try {
       setCompletingId(id);
       await api.put(`/api/booking/${id}/status`, { status: "completed" });
       fetchOnlineBookings();
+      Swal.fire({
+        title: "Appointment Completed",
+        text: "Online consulting record has been successfully closed.",
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false
+      });
     } catch (err) {
       console.error("Failed to update online status:", err);
-    } finally{
+    } finally {
       setCompletingId(null);
     }
   };
@@ -424,243 +252,636 @@ export default function DoctorAppointments() {
       setCompletingId(id);
       await api.put(`/api/bookOffline/${id}/status`, { status: "completed" });
       fetchOfflineBookings();
+      Swal.fire({
+        title: "Appointment Completed",
+        text: "Walk-in registration slot has been successfully completed.",
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false
+      });
     } catch (err) {
       console.error("Failed to update offline status:", err);
-    } finally{
+    } finally {
       setCompletingId(null);
     }
   };
 
-  // ── Group online by time period ────────────────────────────────────────────
+  const toggleQueueStatus = (status: "active" | "paused" | "blocked") => {
+    setQueueStatus(status);
+    localStorage.setItem("doctorQueueStatus", status);
 
-  const { today, startOfWeek, endOfWeek } = getWeekBounds();
+    if (socketRef.current && clinicId) {
+      socketRef.current.emit("doctorQueueUpdate", {
+        roomId: "clinic:" + clinicId,
+        status,
+        doctorId: doctorId || ""
+      });
+    }
+    
+    let message = "Your clinic queue status is now Active.";
+    if (status === "paused") {
+      message = "Clinic queue has been paused. Reception desk notified.";
+    } else if (status === "blocked") {
+      message = "Appointments for the rest of today have been blocked.";
+    }
 
-  const todayOnline = onlineBookings.filter(
-    (b) => new Date(b.dateTime).toDateString() === today.toDateString()
-  );
-  const weekOnline = onlineBookings.filter((b) => {
-    const d = new Date(b.dateTime);
-    return d.toDateString() !== today.toDateString() && d >= startOfWeek && d <= endOfWeek;
-  });
-  const upcomingOnline = onlineBookings.filter(
-    (b) => new Date(b.dateTime) > endOfWeek
-  );
+    Swal.fire({
+      title: "Queue Status Updated",
+      text: message,
+      icon: "info",
+      confirmButtonColor: "#0c213e"
+    });
+  };
 
-  // ── Group offline by time period ───────────────────────────────────────────
+  // Socket connection hook
+  useEffect(() => {
+    if (!clinicId) return;
+    const socketUrl = import.meta.env.VITE_API_BASE || "http://localhost:3000";
+    const socket = io(socketUrl, {
+      transports: ["websocket"]
+    });
 
-  const todayStr = today.toISOString().split("T")[0];
-  const endOfWeekStr = endOfWeek.toISOString().split("T")[0];
+    socketRef.current = socket;
 
-  const todayOffline = offlineBookings.filter((b) => b.date.slice(0, 10) === todayStr);
-  const weekOffline = offlineBookings.filter((b) => {
-    const d = b.date.slice(0, 10);
-    return d !== todayStr && d >= todayStr && d <= endOfWeekStr;
-  });
-  const upcomingOffline = offlineBookings.filter(
-    (b) => b.date.slice(0, 10) > endOfWeekStr
-  );
+    socket.on("connect", () => {
+      console.log("Socket connected for Queue Controls:", socket.id);
+      socket.emit("joinRoom", "clinic:" + clinicId);
 
-  // ✅ Total future appointments count for each tab
-  const totalFutureOffline = todayOffline.length + weekOffline.length + upcomingOffline.length;
-  const totalFutureOnline = todayOnline.length + weekOnline.length + upcomingOnline.length;
+      // Emit status on connection
+      socket.emit("doctorQueueUpdate", {
+        roomId: "clinic:" + clinicId,
+        status: queueStatus,
+        doctorId: doctorId || ""
+      });
+    });
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+    return () => {
+      socket.emit("leaveRoom", "clinic:" + clinicId);
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [clinicId, queueStatus]);
+
+  // Date helper methods
+  const isDateToday = (dateStr: string | Date) => {
+    const d = new Date(dateStr);
+    const today = new Date();
+    return d.getDate() === today.getDate() &&
+           d.getMonth() === today.getMonth() &&
+           d.getFullYear() === today.getFullYear();
+  };
+
+  const isDateFuture = (dateStr: string | Date) => {
+    const d = new Date(dateStr);
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    return d > today;
+  };
+
+  // ─── Search filtering ────────────────────────────────────────────────────────
+  const filteredOnlineBookings = useMemo(() => {
+    if (!searchTerm.trim()) return onlineBookings;
+    const term = searchTerm.toLowerCase();
+    return onlineBookings.filter((b) => 
+      b.patient?.name?.toLowerCase().includes(term) ||
+      String(b.patient?.contact).includes(term)
+    );
+  }, [onlineBookings, searchTerm]);
+
+  const filteredOfflineBookings = useMemo(() => {
+    if (!searchTerm.trim()) return offlineBookings;
+    const term = searchTerm.toLowerCase();
+    return offlineBookings.filter((b) => {
+      const name = b.userId?.fullName || b.patient?.name || "";
+      const phone = b.userId?.mobileNumber || b.patient?.contact || "";
+      return name.toLowerCase().includes(term) || String(phone).includes(term);
+    });
+  }, [offlineBookings, searchTerm]);
+
+  // Sub-tab categorized filters
+  const displayedOfflineBookings = useMemo(() => {
+    return filteredOfflineBookings.filter((b) => {
+      const isToday = b.date ? isDateToday(b.date) : false;
+      const isFuture = b.date ? isDateFuture(b.date) : false;
+      const isPastOrDone = (!isToday && !isFuture) || b.status === "completed" || b.status === "cancelled";
+
+      if (queueSubTab === "active") {
+        return isToday && b.status !== "completed" && b.status !== "cancelled";
+      } else if (queueSubTab === "upcoming") {
+        return isFuture && b.status !== "completed" && b.status !== "cancelled";
+      } else {
+        return isPastOrDone;
+      }
+    });
+  }, [filteredOfflineBookings, queueSubTab]);
+
+  const displayedOnlineBookings = useMemo(() => {
+    return filteredOnlineBookings.filter((b) => {
+      const isToday = b.dateTime ? isDateToday(b.dateTime) : false;
+      const isFuture = b.dateTime ? isDateFuture(b.dateTime) : false;
+      const isPastOrDone = (!isToday && !isFuture) || b.status === "completed" || b.status === "cancelled";
+
+      if (queueSubTab === "active") {
+        return isToday && b.status !== "completed" && b.status !== "cancelled";
+      } else if (queueSubTab === "upcoming") {
+        return isFuture && b.status !== "completed" && b.status !== "cancelled";
+      } else {
+        return isPastOrDone;
+      }
+    });
+  }, [filteredOnlineBookings, queueSubTab]);
+
+  // ─── Grouping bookings ─────────────────────────────────────────────
+  // Totals for Dashboard Cards
+  const totals = useMemo(() => {
+    const activeOffline = offlineBookings.filter(b => b.status === "pending" || b.status === "waiting" || b.status === "in-consultation");
+    const activeOnline = onlineBookings.filter(b => b.status === "pending");
+    
+    const completedOffline = offlineBookings.filter(b => b.status === "completed").length;
+    const completedOnline = onlineBookings.filter(b => b.status === "completed").length;
+
+    return {
+      waitingWalkins: activeOffline.length,
+      waitingOnline: activeOnline.length,
+      completedToday: completedOffline + completedOnline,
+      totalActive: activeOffline.length + activeOnline.length
+    };
+  }, [offlineBookings, onlineBookings]);
 
   if (loading) {
     return (
-      <div className="p-4 ml-5 lg:p-8 flex flex-col w-full">
-        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-6 text-gray-800">Appointments</h2>
-        <div className="flex justify-center py-16">
-          <div className="animate-spin rounded-full h-10 w-10 border-4 border-gray-200 border-t-[#0c213e]" />
-        </div>
+      <div className="p-8 flex flex-col items-center justify-center min-h-[400px]">
+        <RefreshCw className="w-10 h-10 text-[#0c213e] animate-spin mb-4" />
+        <p className="text-gray-500 font-medium">Reconciling doctor appointment queues...</p>
       </div>
     );
   }
 
   return (
-    <div className="p-4 ml-5 lg:p-8 flex flex-col w-full">
-      <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-6 text-gray-800">Appointments</h2>
+    <div className="w-full p-6 space-y-6 font-[Poppins]">
+      
+      {/* ─── Header & Queue status ─────────────────────────────────────────── */}
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 bg-white p-6 rounded-2xl border border-gray-200 shadow-xs">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Patient Appointments</h1>
+          <p className="text-sm text-gray-500 mt-1">Review, sort, and consult walk-ins and video schedules.</p>
+        </div>
 
-      {/* ── Tab switcher ── */}
-      <div className="flex gap-2 mb-8">
+        {/* Quick actions for queue control */}
+        <div className="flex flex-wrap items-center gap-3 bg-gray-50 p-2 rounded-xl border border-gray-150">
+          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider px-2">Queue Controls:</span>
+          
+          <button
+            onClick={() => toggleQueueStatus("active")}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${queueStatus === "active" ? "bg-[#0c213e] text-white shadow-xs" : "text-gray-600 hover:bg-gray-100"}`}
+          >
+            <Play className="w-3.5 h-3.5" /> Active
+          </button>
+          
+          <button
+            onClick={() => toggleQueueStatus("paused")}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${queueStatus === "paused" ? "bg-amber-600 text-white shadow-xs" : "text-gray-600 hover:bg-gray-100"}`}
+          >
+            <Pause className="w-3.5 h-3.5" /> Pause (Emergency)
+          </button>
+
+          <button
+            onClick={() => toggleQueueStatus("blocked")}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${queueStatus === "blocked" ? "bg-red-600 text-white shadow-xs" : "text-gray-600 hover:bg-gray-100"}`}
+          >
+            <Power className="w-3.5 h-3.5" /> Block Rest of Day
+          </button>
+        </div>
+      </div>
+
+      {/* ─── Vitals Stats Cards ───────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        
+        {/* Total Active Queue */}
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 flex items-center gap-4 shadow-xs">
+          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0 animate-pulse">
+            <Users className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider block">Total Active Queue</span>
+            <h3 className="text-2xl font-bold text-gray-900 mt-0.5">{totals.totalActive}</h3>
+          </div>
+        </div>
+
+        {/* Walk-in Waiting */}
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 flex items-center gap-4 shadow-xs">
+          <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center shrink-0">
+            <MapPin className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider block">Walk-in Waiting</span>
+            <h3 className="text-2xl font-bold text-gray-900 mt-0.5">{totals.waitingWalkins}</h3>
+          </div>
+        </div>
+
+        {/* Online Consulting */}
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 flex items-center gap-4 shadow-xs">
+          <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+            <Video className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider block">Online Consulting</span>
+            <h3 className="text-2xl font-bold text-gray-900 mt-0.5">{totals.waitingOnline}</h3>
+          </div>
+        </div>
+
+        {/* Consultations Done */}
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 flex items-center gap-4 shadow-xs">
+          <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
+            <CheckCircle className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider block">Consultations Done</span>
+            <h3 className="text-2xl font-bold text-gray-900 mt-0.5">{totals.completedToday}</h3>
+          </div>
+        </div>
+
+      </div>
+
+      {/* ─── Search & Tab Switcher Controls ─────────────────────────────────── */}
+      <div className="bg-white p-5 border border-gray-200 rounded-2xl shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+        
+        {/* Tab switchers */}
+        <div className="flex gap-2 p-1 bg-gray-100 rounded-xl border border-gray-200 w-full md:w-auto">
+          <button
+            onClick={() => setActiveTab("offline")}
+            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wide cursor-pointer ${
+              activeTab === "offline" ? "bg-[#0c213e] text-white shadow-xs" : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            <MapPin className="w-4 h-4" />
+            Walk-in Patients
+          </button>
+          <button
+            onClick={() => setActiveTab("online")}
+            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wide cursor-pointer ${
+              activeTab === "online" ? "bg-[#0c213e] text-white shadow-xs" : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            <Video className="w-4 h-4" />
+            Online Teleconsults
+          </button>
+        </div>
+
+        {/* Search Bar */}
+        <div className="relative w-full md:w-80">
+          <Search className="absolute left-3.5 top-3 w-4 h-4 text-gray-400" />
+          <input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search patient name / contact..."
+            className="w-full border border-gray-300 rounded-xl pl-10 pr-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition bg-white"
+          />
+        </div>
+
+      </div>
+
+      {/* ─── Queue Sub-Tab Filters ─────────────────────────────────────────── */}
+      <div className="flex border-b border-gray-250 bg-white p-2 rounded-2xl border border-gray-250/80 shadow-xs gap-1">
         <button
-          onClick={() => setActiveTab("offline")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
-            activeTab === "offline"
-              ? "bg-[#0c213e] text-white border-[#0c213e] shadow"
-              : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+          type="button"
+          onClick={() => setQueueSubTab("active")}
+          className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+            queueSubTab === "active" ? "bg-blue-600 text-white shadow-sm" : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
           }`}
         >
-          <BuildingStorefrontIcon className="w-4 h-4" />
-          Walk-in
-          {/* ✅ Shows count only if there are future appointments, otherwise no badge */}
-          {totalFutureOffline > 0 && (
-            <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-bold ${activeTab === "offline" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-600"}`}>
-              {totalFutureOffline}
-            </span>
-          )}
+          Active Queue (Today)
         </button>
         <button
-          onClick={() => setActiveTab("online")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
-            activeTab === "online"
-              ? "bg-[#0c213e] text-white border-[#0c213e] shadow"
-              : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+          type="button"
+          onClick={() => setQueueSubTab("upcoming")}
+          className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+            queueSubTab === "upcoming" ? "bg-blue-600 text-white shadow-sm" : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
           }`}
         >
-          <VideoCameraIcon className="w-4 h-4" />
-          Online
-          {/* ✅ Shows count only if there are future appointments, otherwise no badge */}
-          {totalFutureOnline > 0 && (
-            <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-bold ${activeTab === "online" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-600"}`}>
-              {totalFutureOnline}
-            </span>
-          )}
+          Upcoming Schedules
+        </button>
+        <button
+          type="button"
+          onClick={() => setQueueSubTab("history")}
+          className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+            queueSubTab === "history" ? "bg-blue-600 text-white shadow-sm" : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+          }`}
+        >
+          Past & Completed History
         </button>
       </div>
 
-      {/* ── Online tab ── */}
-      {activeTab === "online" && (
-        <>
-          {/* ✅ Shows "No online appointments" when no future appointments */}
-          {totalFutureOnline === 0 ? (
-            <div className="text-center text-gray-500 py-10 text-lg">No online appointments</div>
-          ) : (
-            <>
-              <SectionGroup
-                title="Today's Appointments"
-                list={todayOnline}
-                renderCard={(b) => (
-                  <OnlineBookingCard
-                    key={b._id}
-                    b={b}
-                    onComplete={completeOnline}
-                    completing={completingId === b._id}
-                    prescribed={prescribedIds.includes(b._id)}
-                    onPrescription={(b) =>
-                      navigate(
-                        `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
-                        { state: { name: b.patient?.name, gender: b.patient?.gender } }
-                      )
-                    }
-                  />
-                )}
-              />
-              <SectionGroup
-                title="This Week's Appointments"
-                list={weekOnline}
-                renderCard={(b) => (
-                  <OnlineBookingCard
-                    key={b._id}
-                    b={b}
-                    onComplete={completeOnline}
-                    completing={completingId === b._id}
-                    prescribed={prescribedIds.includes(b._id)}
-                    onPrescription={(b) =>
-                      navigate(
-                        `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
-                        { state: { name: b.patient?.name, gender: b.patient?.gender } }
-                      )
-                    }
-                  />
-                )}
-              />
-              <SectionGroup
-                title="Upcoming Appointments"
-                list={upcomingOnline}
-                renderCard={(b) => (
-                  <OnlineBookingCard
-                    key={b._id}
-                    b={b}
-                    onComplete={completeOnline}
-                    completing={completingId === b._id}
-                    prescribed={prescribedIds.includes(b._id)}
-                    onPrescription={(b) =>
-                      navigate(
-                        `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
-                        { state: { name: b.patient?.name, gender: b.patient?.gender } }
-                      )
-                    }
-                  />
-                )}
-              />
-            </>
-          )}
-        </>
+      {/* Warning banner for Emergency Mode */}
+      {queueStatus !== "active" && (
+        <div className={`p-4 rounded-xl border ${queueStatus === "paused" ? "bg-amber-50 text-amber-800 border-amber-200" : "bg-red-50 text-red-800 border-red-200"} flex items-center gap-3 animate-pulse`}>
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <div className="text-xs font-semibold">
+            {queueStatus === "paused" 
+              ? "EMERGENCY: Queue operations are temporarily paused. Real-time patient check-ins are on hold."
+              : "BLOCKED: Intake for today has been closed. No further walk-ins or bookings can join the active queue."}
+          </div>
+        </div>
       )}
 
-      {/* ── Offline (Walk-in) tab ── */}
-      {activeTab === "offline" && (
-        <>
-          {/* ✅ Shows "No walk-in appointments" when no future appointments */}
-          {totalFutureOffline === 0 ? (
-            <div className="text-center text-gray-500 py-10 text-lg">No walk-in appointments</div>
+      {/* ─── High Density Queue Registry Data Table ─────────────────────────── */}
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-xs overflow-hidden">
+        
+        {activeTab === "offline" ? (
+          displayedOfflineBookings.length === 0 ? (
+            <div className="text-center py-20 text-gray-400">
+              <MapPin className="w-12 h-12 mx-auto text-gray-300 stroke-[1.2] mb-3" />
+              <h4 className="text-base font-bold text-gray-800">No Walk-in Queue Listings</h4>
+              <p className="text-xs text-gray-400 mt-1">Check-in details matching filter criteria will show here.</p>
+            </div>
           ) : (
-            <>
-              <SectionGroup
-                title="Today's Walk-ins"
-                list={todayOffline}
-                renderCard={(b) => (
-                  <OfflineBookingCard
-                    key={b._id}
-                    b={b}
-                    onComplete={completeOffline}
-                     completing={completingId === b._id}
-                     prescribed={prescribedIds.includes(b._id)}
-                    onPrescription={(b) =>{
-                        console.log(b);
-  console.log("Aadhar:", b.userId?.aadhar);
-                      navigate(
-                        `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.userId?.aadhar || ""}`,
-                        { state: { name: b.userId?.fullName, gender: b.userId?.gender,mobileNumber:b.userId?.mobileNumber } }
-                      )
-                    }
-                    }
-                  />
-                )}
-              />
-              <SectionGroup
-                title="This Week's Walk-ins"
-                list={weekOffline}
-                renderCard={(b) => (
-                  <OfflineBookingCard
-                    key={b._id}
-                    b={b}
-                    onComplete={completeOffline}
-                     completing={completingId === b._id}
-                     prescribed={prescribedIds.includes(b._id)}
-                    onPrescription={(b) =>
-                      navigate(
-                        `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.userId?.aadhar || ""}`,
-                        { state: { name: b.userId?.fullName, gender: b.userId?.gender,mobileNumber:b.userId?.mobileNumber } }
-                      )
-                    }
-                  />
-                )}
-              />
-              <SectionGroup
-                title="Upcoming Walk-ins"
-                list={upcomingOffline}
-                renderCard={(b) => (
-                  <OfflineBookingCard
-                    key={b._id}
-                    b={b}
-                    onComplete={completeOffline}
-                     completing={completingId === b._id}
-                     prescribed={prescribedIds.includes(b._id)}
-                    onPrescription={(b) =>
-                      navigate(
-                        `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.userId?.aadhar || ""}`,
-                        { state: { name: b.userId?.fullName, gender: b.userId?.gender,mobileNumber:b.userId?.mobileNumber } }
-                      )
-                    }
-                  />
-                )}
-              />
-            </>
-          )}
-        </>
-      )}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-[#0c213e] text-white text-xs font-bold uppercase tracking-wider">
+                  <tr>
+                    <th className="px-6 py-4">Token & Entry</th>
+                    <th className="px-6 py-4">Patient Profile</th>
+                    <th className="px-6 py-4">Consultation Fee</th>
+                    <th className="px-6 py-4">Visit Date</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4 text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-150 text-sm text-gray-700">
+                  {displayedOfflineBookings.map((b) => {
+                    const patientName = b.userId?.fullName || b.patient?.name || "Walk-in Patient";
+                    const patientGender = b.userId?.gender || b.patient?.gender || "Unknown";
+                    const patientPhone = b.userId?.mobileNumber || b.patient?.contact || "No Contact";
+                    const patientAadhar = b.userId?.aadhar || b.patient?.aadhar || "";
+                    const prescribed = prescribedIds.includes(b._id);
+
+                    const ageVal = b.userId?.dob 
+                      ? `${new Date().getFullYear() - new Date(b.userId.dob).getFullYear()} Yrs` 
+                      : b.patient?.age ? `${b.patient.age} Yrs` : "N/A";
+
+                    return (
+                      <tr key={b._id} className="hover:bg-gray-50/50 transition">
+                        
+                        {/* Token */}
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold px-2.5 py-1 rounded-lg">
+                            <Hash className="w-3.5 h-3.5 text-amber-500" />
+                            Token #{b.tokenNumber}
+                          </span>
+                        </td>
+
+                        {/* Profile Info */}
+                        <td className="px-6 py-4">
+                          <div>
+                            <span className="font-bold text-gray-900 block capitalize">{patientName}</span>
+                            <span className="text-xs text-gray-500 mt-0.5 block">
+                              {ageVal} • {patientGender}
+                            </span>
+                            <span className="text-xs text-gray-400 block mt-0.5">
+                              📞 {patientPhone} {patientAadhar && `| Aadhar: ${patientAadhar}`}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Fee details */}
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-1">
+                            <span className="font-bold text-gray-900 flex items-center gap-0.5">
+                              <IndianRupee size={13} className="text-gray-400" />
+                              {b.fees}
+                            </span>
+                            <span className={`inline-flex items-center text-[9px] w-fit font-extrabold uppercase px-1.5 py-0.2 rounded border ${b.paid ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200"}`}>
+                              {b.paid ? "Paid" : "Unpaid"}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Date */}
+                        <td className="px-6 py-4 text-xs font-medium text-gray-500">
+                          {b.date ? new Date(b.date).toLocaleDateString("en-IN", {
+                            day: "2-digit", month: "short", year: "numeric"
+                          }) : "—"}
+                        </td>
+
+                        {/* Status */}
+                        <td className="px-6 py-4">
+                          <StatusBadge status={b.status} />
+                        </td>
+
+                        {/* Action parameters */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-center gap-2">
+                            
+                            {b.status === "completed" ? (
+                              prescribed ? (
+                                <button
+                                  onClick={() => 
+                                    navigate(
+                                      `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${patientAadhar}`,
+                                      { state: { name: patientName, gender: patientGender, mobileNumber: patientPhone } }
+                                    )
+                                  }
+                                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition cursor-pointer"
+                                >
+                                  <Printer size={13} className="text-emerald-600" /> View / Print Rx
+                                </button>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-50 border border-gray-200 text-gray-400 rounded-xl text-xs font-bold">
+                                  <Lock size={12} className="text-gray-400" /> Closed
+                                </span>
+                              )
+                            ) : (
+                              <>
+                                {b.status === "pending" && (
+                                  <button
+                                    onClick={() => completeOffline(b._id)}
+                                    disabled={completingId === b._id}
+                                    className="inline-flex items-center gap-1 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 disabled:bg-gray-100 text-emerald-700 border border-emerald-250 rounded-xl text-xs font-bold transition cursor-pointer"
+                                    title="Mark Completed"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                    {completingId === b._id ? "..." : "Complete"}
+                                  </button>
+                                )}
+
+                                <button
+                                  onClick={() => 
+                                    navigate(
+                                      `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${patientAadhar}`,
+                                      { state: { name: patientName, gender: patientGender, mobileNumber: patientPhone } }
+                                    )
+                                  }
+                                  className={`inline-flex items-center gap-1 px-4 py-2 rounded-xl text-xs font-bold border transition cursor-pointer ${prescribed ? "bg-gray-100 text-gray-400 border-gray-250" : "bg-[#0c213e] hover:bg-blue-900 text-white border-[#0c213e]"}`}
+                                >
+                                  {prescribed ? (
+                                    <>
+                                      <CheckCircle size={14} className="text-emerald-500" /> Prescribed
+                                    </>
+                                  ) : (
+                                    <>
+                                      Consult <ArrowRight size={14} />
+                                    </>
+                                  )}
+                                </button>
+                              </>
+                            )}
+
+                          </div>
+                        </td>
+
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )
+        ) : (
+          displayedOnlineBookings.length === 0 ? (
+            <div className="text-center py-20 text-gray-400">
+              <Video className="w-12 h-12 mx-auto text-gray-300 stroke-[1.2] mb-3" />
+              <h4 className="text-base font-bold text-gray-800">No Teleconsult Slots Scheduled</h4>
+              <p className="text-xs text-gray-400 mt-1">Consultation details matching filter criteria will show here.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-[#0c213e] text-white text-xs font-bold uppercase tracking-wider">
+                  <tr>
+                    <th className="px-6 py-4">Visit Type</th>
+                    <th className="px-6 py-4">Patient Profile</th>
+                    <th className="px-6 py-4">Consultation Fee</th>
+                    <th className="px-6 py-4">Scheduled Date</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4 text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-150 text-sm text-gray-700">
+                  {displayedOnlineBookings.map((b) => {
+                    const dateObj = new Date(b.dateTime);
+                    const formattedDate = dateObj.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+                    const formattedTime = dateObj.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+                    const prescribed = prescribedIds.includes(b._id);
+
+                    return (
+                      <tr key={b._id} className="hover:bg-gray-50/50 transition">
+                        
+                        {/* Visit Mode */}
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs font-bold px-2.5 py-1 rounded-lg uppercase">
+                            <Video className="w-3.5 h-3.5 text-indigo-500" />
+                            {b.mode || "Online"}
+                          </span>
+                        </td>
+
+                        {/* Profile details */}
+                        <td className="px-6 py-4">
+                          <div>
+                            <span className="font-bold text-gray-900 block capitalize">{b.patient?.name}</span>
+                            <span className="text-xs text-gray-500 mt-0.5 block">
+                              {b.patient?.age} Yrs • {b.patient?.gender}
+                            </span>
+                            <span className="text-xs text-gray-400 block mt-0.5">
+                              📞 {b.patient?.contact} {b.patient?.aadhar && `| Aadhar: ${b.patient.aadhar}`}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Fee */}
+                        <td className="px-6 py-4">
+                          <span className="font-bold text-gray-900 flex items-center gap-0.5">
+                            <IndianRupee size={13} className="text-gray-400" />
+                            {b.fees}
+                          </span>
+                        </td>
+
+                        {/* Schedule date */}
+                        <td className="px-6 py-4">
+                          <div>
+                            <span className="font-semibold text-gray-800 block text-xs">{formattedDate}</span>
+                            <span className="text-[10px] text-gray-400 block mt-0.5 flex items-center gap-0.5">
+                              <Clock size={11} /> {formattedTime}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Status */}
+                        <td className="px-6 py-4">
+                          <StatusBadge status={b.status} />
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-center gap-2">
+                            
+                            {b.status === "completed" ? (
+                              prescribed ? (
+                                <button
+                                  onClick={() => 
+                                    navigate(
+                                      `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
+                                      { state: { name: b.patient?.name, gender: b.patient?.gender, mobileNumber: b.patient?.contact } }
+                                    )
+                                  }
+                                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition cursor-pointer"
+                                >
+                                  <Printer size={13} className="text-emerald-600" /> View / Print Rx
+                                </button>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-50 border border-gray-200 text-gray-400 rounded-xl text-xs font-bold">
+                                  <Lock size={12} className="text-gray-400" /> Closed
+                                </span>
+                              )
+                            ) : (
+                              <>
+                                {b.status === "pending" && (
+                                  <button
+                                    onClick={() => completeOnline(b._id)}
+                                    disabled={completingId === b._id}
+                                    className="inline-flex items-center gap-1 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 disabled:bg-gray-100 text-emerald-700 border border-emerald-250 rounded-xl text-xs font-bold transition cursor-pointer"
+                                    title="Mark Completed"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                    {completingId === b._id ? "..." : "Complete"}
+                                  </button>
+                                )}
+
+                                <button
+                                  onClick={() => 
+                                    navigate(
+                                      `/doctordashboard/${doctorId}/appointments/addPrescription/${b._id}/${b.patient?.aadhar || ""}`,
+                                      { state: { name: b.patient?.name, gender: b.patient?.gender, mobileNumber: b.patient?.contact } }
+                                    )
+                                  }
+                                  className={`inline-flex items-center gap-1 px-4 py-2 rounded-xl text-xs font-bold border transition cursor-pointer ${prescribed ? "bg-gray-100 text-gray-400 border-gray-250" : "bg-[#0c213e] hover:bg-blue-900 text-white border-[#0c213e]"}`}
+                                >
+                                  {prescribed ? (
+                                    <>
+                                      <CheckCircle size={14} className="text-emerald-500" /> Prescribed
+                                    </>
+                                  ) : (
+                                    <>
+                                      Consult <ArrowRight size={14} />
+                                    </>
+                                  )}
+                                </button>
+                              </>
+                            )}
+
+                          </div>
+                        </td>
+
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )
+        )}
+
+      </div>
+
     </div>
   );
 }
