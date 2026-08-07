@@ -12,7 +12,7 @@ import {
 import api from "../../Services/mainApi";
 import { useNavigate } from "react-router-dom";
 import Cookies from "js-cookie";
-import { Play, Pause, Power, Info } from "lucide-react";
+import { Play, Pause, Power } from "lucide-react";
 
 interface Doctor {
   _id: string;

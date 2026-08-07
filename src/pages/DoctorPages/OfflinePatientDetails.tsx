@@ -1,21 +1,21 @@
-import React, { useEffect, useState } from "react";
+import  { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
-  Activity,
+  // Activity,
   ArrowLeft,
   CalendarDays,
-  ClipboardList,
+  // ClipboardList,
   FileText,
   Hash,
-  Phone,
+  // Phone,
   ShieldCheck,
   Stethoscope,
-  User,
-  Heart,
+  // User,
+  // Heart,
   AlertTriangle,
   IndianRupee,
   FileSpreadsheet,
-  ChevronRight
+  // ChevronRight
 } from "lucide-react";
 import api from "../../Services/mainApi";
 
@@ -121,7 +121,7 @@ export default function OfflinePatientDetails() {
   const [booking, setBooking] = useState<OfflineBooking | null>(
     location.state?.booking ?? null
   );
-  const [appointmentHistory, setAppointmentHistory] = useState<OfflineBooking[]>([]);
+  // appointmentHistory removed (unused)
   const [emrRecords, setEmrRecords] = useState<EMRRecord[]>([]);
   const [prescriptions, setPrescriptions] = useState<PrescriptionItem[]>([]);
   const [loading, setLoading] = useState(!location.state?.booking);
@@ -166,33 +166,7 @@ export default function OfflinePatientDetails() {
     fetchBooking();
   }, [drId, userId, location.state]);
 
-  // ─── Fetch Appointment History ──────────────────────────────────────────────
 
-  useEffect(() => {
-    if (!drId || !userId) return;
-
-    const fetchHistory = async () => {
-      try {
-        const res = await api.get<{ bookings: OfflineBooking[] }>(
-          `/api/bookOffline/doctor/${drId}/all-patient`
-        );
-
-        const history = (res.data.bookings || []).filter((item) => {
-          const itemUserId =
-            typeof item.userId === "object" && item.userId ? item.userId._id : item.userId;
-          return String(itemUserId) === String(userId);
-        });
-
-        setAppointmentHistory(
-          history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        );
-      } catch (error) {
-        console.error("Failed to load patient appointment history:", error);
-      }
-    };
-
-    fetchHistory();
-  }, [drId, userId]);
 
   // ─── Patient Details Resolution ─────────────────────────────────────────────
 
@@ -214,8 +188,8 @@ export default function OfflinePatientDetails() {
       ? booking.userId.contact
       : "—";
 
-  const patientEmail =
-    typeof booking?.userId === "object" && booking.userId?.email ? booking.userId.email : "—";
+  // const patientEmail =
+  //   typeof booking?.userId === "object" && booking.userId?.email ? booking.userId.email : "—";
 
   const patientAadhar =
     typeof booking?.userId === "object" && booking.userId?.aadhar ? booking.userId.aadhar : "";

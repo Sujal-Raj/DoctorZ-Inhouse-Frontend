@@ -62,7 +62,7 @@ const AddMedicine: React.FC = () => {
 
   // Medicine Kits states
   const [kits, setKits] = useState<{ _id: string; name: string; medicines: string[] }[]>([]);
-  const [loadingKits, setLoadingKits] = useState(false);
+  // const [loadingKits, setLoadingKits] = useState(false);
   const [kitName, setKitName] = useState("");
   const [selectedKitMeds, setSelectedKitMeds] = useState<string[]>([]);
 
@@ -94,7 +94,7 @@ const AddMedicine: React.FC = () => {
 
   const fetchKits = useCallback(async () => {
     if (!doctorId) return;
-    setLoadingKits(true);
+    // setLoadingKits(true);
     try {
       const res = await api.get(`/api/doctor/kits/${doctorId}`);
       if (res.data.success) {
@@ -103,7 +103,7 @@ const AddMedicine: React.FC = () => {
     } catch (err) {
       console.error("Failed to load kits:", err);
     } finally {
-      setLoadingKits(false);
+      // setLoadingKits(false);
     }
   }, [doctorId]);
 

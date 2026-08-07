@@ -1,9 +1,8 @@
-import React, { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Users, Search, Video, MapPin, Phone, Hash, IndianRupee,
-  Download, ArrowUpDown, Filter, RefreshCw, FileText, CheckCircle2,
-  AlertCircle, CreditCard, ChevronRight, X
+  Download, ArrowUpDown, Filter, RefreshCw, FileText, ChevronRight, X
 } from "lucide-react";
 import api from "../../Services/mainApi";
 import Swal from "sweetalert2";
